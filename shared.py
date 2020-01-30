@@ -1,7 +1,7 @@
 from byte_io_wmd import ByteIO
 
 
-class Vector:
+class PragmaVector:
     sanitize = True  # disable for speedup
     size = 0
     value_type = "x"
@@ -13,7 +13,7 @@ class Vector:
     def __init__(self, initial_values=None, *args):
         if initial_values is not None:
             if type(initial_values) in [int, float] and args:
-                # case where Vector initialized as Vector(X,Y,Z...) instead of Vector([X,Y,Z...])
+                # case where PragmaVector initialized as PragmaVector(X,Y,Z...) instead of PragmaVector([X,Y,Z...])
                 initial_values = [initial_values, ] + list(args)
             if self.sanitize:
                 self.validate_input(initial_values)
@@ -28,7 +28,7 @@ class Vector:
     def values(self):
         return self._values
 
-    def __eq__(self, other: 'Vector'):
+    def __eq__(self, other: 'PragmaVector'):
         return self.size == other.size and self.value_type == other.value_type and self.values == other.values
 
     def __repr__(self):
@@ -36,7 +36,7 @@ class Vector:
         return f"{self.__class__.__name__}({values})"
 
 
-class Vector2F(Vector):
+class PragmaVector2F(PragmaVector):
     size = 2
     value_type = 'f'
 
@@ -49,7 +49,7 @@ class Vector2F(Vector):
         return self.values[1]
 
 
-class Vector3F(Vector):
+class PragmaVector3F(PragmaVector):
     size = 3
     value_type = 'f'
 
@@ -66,7 +66,7 @@ class Vector3F(Vector):
         return self.values[2]
 
 
-class Vector4F(Vector):
+class PragmaVector4F(PragmaVector):
     size = 4
     value_type = 'f'
 
@@ -86,8 +86,11 @@ class Vector4F(Vector):
     def w(self):
         return self.values[2]
 
+    def from_file(self, reader: ByteIO):
+        w,x,y,z = list(reader.read_fmt(self.value_type * self.size))
+        self._values = [x,y,z,w]
 
 if __name__ == '__main__':
     # TESTING STUFF
-    assert Vector2F(1, 2) == Vector2F([1, 2])
-    assert Vector2F(1, 2).x == Vector2F([1, 2]).x
+    assert PragmaVector2F(1, 2) == PragmaVector2F([1, 2])
+    assert PragmaVector2F(1, 2).x == PragmaVector2F([1, 2]).x
