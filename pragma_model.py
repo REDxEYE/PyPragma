@@ -5,6 +5,14 @@ from byte_io_wmd import ByteIO
 from shared import PragmaVector3F, PragmaVector4F
 
 
+class PragmaBase:
+    model = None
+
+    @classmethod
+    def set_model(cls, model: 'PragmaModel'):
+        cls.model = model
+
+
 class PragmaModelFlags(IntFlag):
     NONE = auto()
     Static = auto()
@@ -17,7 +25,7 @@ class PragmaModelFlags(IntFlag):
     DontPrecacheTextureGroups = auto()
 
 
-class PragmaBone:
+class PragmaBone(PragmaBase):
     def __init__(self, armature, name="ERROR"):
         self._armature = armature  # type:PragmaArmature
         self.name = name
@@ -43,7 +51,7 @@ class PragmaBone:
         return f"{self.__class__.__name__}({tmp})<pos:{self.position} rot:{self.rotation}>"
 
 
-class PragmaArmature:
+class PragmaArmature(PragmaBase):
     def __init__(self):
         self.bones = []  # type: List[PragmaBone]
         self.roots = []  # type: List[PragmaBone]
@@ -67,7 +75,7 @@ class PragmaArmature:
         pass
 
 
-class PragmaAttachment:
+class PragmaAttachment(PragmaBase):
     def __init__(self, armature):
         self._armature = armature
         self.name = ''
@@ -92,7 +100,7 @@ class PragmaObjectAttachmentType(IntEnum):
     ParticleSystem = 1
 
 
-class PragmaObjectAttachment:
+class PragmaObjectAttachment(PragmaBase):
     def __init__(self):
         self.type = 0
         self.name = ''
@@ -112,7 +120,7 @@ class PragmaObjectAttachment:
         return f"{self.__class__.__name__}({tmp})<attachment:{tmp2} type:{self.type.name}>"
 
 
-class PragmaHitBox:
+class PragmaHitBox(PragmaBase):
     def __init__(self, armature):
         self._armature = armature
         self.bone = None
@@ -127,7 +135,61 @@ class PragmaHitBox:
         self.max.from_file(reader)
 
 
-class PragmaModel:
+class PragmaSubMesh(PragmaBase):
+    def __init__(self):
+        self.pos = PragmaVector3F()
+        self.rot = PragmaVector4F()
+        self.scale = PragmaVector3F()
+        self.material_id = 0
+        self.geometry_type = 0
+
+    def from_file(self, reader: ByteIO):
+        if self.model.version >= 26:
+            self.pos.from_file(reader)
+            self.rot.from_file(reader)
+            self.scale.from_file(reader)
+        if self.model.version >= 27:
+            self.geometry_type = reader.read_uint8()
+
+
+class PragmaMeshV24Plus(PragmaBase):
+    def __init__(self):
+        self.name = ''
+        self.sub_meshes = []  # type: List[PragmaSubMesh]
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        mesh_count = reader.read_uint8()
+        for _ in range(mesh_count):
+            if self.model.version <= 23:
+                pass  # TODO
+            else:
+                sub_mesh_count = reader.read_uint32()
+                for _ in sub_mesh_count:
+                    sub_mesh = PragmaSubMesh()
+                    sub_mesh.from_file(reader)
+                    self.sub_meshes.append(sub_mesh)
+
+
+class PragmaMeshGroup(PragmaBase):
+    def __init__(self):
+        self.rb_min = PragmaVector3F()
+        self.rb_max = PragmaVector3F()
+
+        self.mesh_groups = []
+
+    def from_file(self, reader: ByteIO):
+        self.rb_min.from_file(reader)
+        self.rb_max.from_file(reader)
+        mesh_group_count = reader.read_uint32()
+        for mesh_group_id in range(mesh_group_count):
+            mesh = PragmaMeshV24Plus()
+            mesh.from_file(reader)
+            self.mesh_groups.append(mesh)
+            pass
+
+
+class PragmaModel(PragmaBase):
     def __init__(self):
         self.version = 0
         self.flags = PragmaModelFlags(0)
@@ -141,6 +203,7 @@ class PragmaModel:
 
         self.material_paths = []
         self.materials = []
+        self.skins = {}
 
         self.armature = PragmaArmature()
 
@@ -207,17 +270,22 @@ class PragmaModel:
         for _ in range(material_count):
             self.materials.append(reader.read_ascii_string())
 
+        for skin_id in range(reader.read_int16()):
+            skin = []
+            for _ in range(base_material_count):
+                skin.append(self.materials[reader.read_uint16()])
+            self.skins[skin_id] = skin
 
     @staticmethod
     def check_header(reader: ByteIO):
         with reader.save_current_pos():
             header = reader.read_ascii_string(3)
             if header != "WMD":
-                return False#, {"status": "ERROR", "msg": "invalid header"}
+                return False  # , {"status": "ERROR", "msg": "invalid header"}
             version = reader.read_uint16()
             if version < 20:
-                return False#, {"status": "ERROR", "msg": "invalid version(min supported 20)"}
-        return True#, {"status": "OK", "msg": "no errors"}
+                return False  # , {"status": "ERROR", "msg": "invalid version(min supported 20)"}
+        return True  # , {"status": "OK", "msg": "no errors"}
 
     def __str__(self):
         return f"{self.__class__.__name__}<{'static' if self.static else 'skinned'}>"
