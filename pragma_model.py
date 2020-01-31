@@ -135,27 +135,62 @@ class PragmaHitBox(PragmaBase):
         self.max.from_file(reader)
 
 
+class PragmaSubMeshGeometryType(IntEnum):
+    Triangles = 0
+    Lines = 1
+    Points = 2
+
+
 class PragmaSubMesh(PragmaBase):
     def __init__(self):
         self.pos = PragmaVector3F()
         self.rot = PragmaVector4F()
         self.scale = PragmaVector3F()
+
         self.material_id = 0
-        self.geometry_type = 0
+
+        self.geometry_type = PragmaSubMeshGeometryType(0)
+
+        self.vertices = []
+        self.normals = []
+        self.uvs = []
+        self.weights = []
+        self.indices = []
 
     def from_file(self, reader: ByteIO):
         if self.model.version >= 26:
             self.pos.from_file(reader)
             self.rot.from_file(reader)
             self.scale.from_file(reader)
+        self.material_id = reader.read_uint16()
         if self.model.version >= 27:
-            self.geometry_type = reader.read_uint8()
+            self.geometry_type = PragmaSubMeshGeometryType(reader.read_uint8())
+
+        vertex_count = reader.read_uint64()
+        for _ in range(vertex_count):
+            self.vertices.append(reader.read_fmt("3f"))
+            self.normals.append(reader.read_fmt("3f"))
+            self.uvs.append(reader.read_fmt("2f"))
+
+        weight_count = reader.read_uint64()
+        for _ in range(weight_count):
+            self.weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
+        if self.model.version >= 27:
+            weight_count = reader.read_uint64()
+            for _ in range(weight_count):
+                self.weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
+        indices_count = reader.read_uint32()
+        for _ in range(indices_count):
+            self.indices.append(reader.read_fmt('3H'))
 
 
 class PragmaMeshV24Plus(PragmaBase):
     def __init__(self):
         self.name = ''
         self.sub_meshes = []  # type: List[PragmaSubMesh]
+
+    def __repr__(self):
+        return f"Mesh<{self.name}>(sub meshes:{len(self.sub_meshes)})"
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
@@ -165,7 +200,7 @@ class PragmaMeshV24Plus(PragmaBase):
                 pass  # TODO
             else:
                 sub_mesh_count = reader.read_uint32()
-                for _ in sub_mesh_count:
+                for _ in range(sub_mesh_count):
                     sub_mesh = PragmaSubMesh()
                     sub_mesh.from_file(reader)
                     self.sub_meshes.append(sub_mesh)
@@ -177,6 +212,9 @@ class PragmaMeshGroup(PragmaBase):
         self.rb_max = PragmaVector3F()
 
         self.mesh_groups = []
+        self.bodygroups = {}
+
+        self.group_ids = {}
 
     def from_file(self, reader: ByteIO):
         self.rb_min.from_file(reader)
@@ -188,9 +226,39 @@ class PragmaMeshGroup(PragmaBase):
             self.mesh_groups.append(mesh)
             pass
 
+        base_mesh_count = reader.read_uint16()
+        for i in range(base_mesh_count):
+            self.group_ids[i] = []
+        for i in range(base_mesh_count):
+            self.group_ids[i].append(reader.read_uint32())
+
+    def read_bodygroups(self, reader: ByteIO):
+        bodygroup_count = reader.read_uint16()
+        for _ in range(bodygroup_count):
+            name = reader.read_ascii_string()
+            self.bodygroups[name] = []
+            mesh_count = reader.read_uint8()
+            for _ in range(mesh_count):
+                self.bodygroups[name].append(self.mesh_groups[reader.read_uint32()])
+
+
+class PragmaLodInfo(PragmaBase):
+    def __init__(self):
+        self.lods = {}
+
+    def from_file(self, reader: ByteIO):
+        lod_count = reader.read_uint8()
+        for _ in range(lod_count):
+            lod_id = reader.read_uint8()
+            self.lods[lod_id] = []
+            replace_count = reader.read_uint8()
+            for i in range(replace_count):
+                self.lods[lod_id].append(reader.read_fmt('ii'))  # original,replacement
+
 
 class PragmaModel(PragmaBase):
     def __init__(self):
+        PragmaBase.set_model(self)
         self.version = 0
         self.flags = PragmaModelFlags(0)
         self.eye_offset = PragmaVector3F()
@@ -210,6 +278,9 @@ class PragmaModel(PragmaBase):
         self.attachments = []  # type: List[PragmaAttachment]
         self.object_attachments = []  # type: List[PragmaObjectAttachment]
         self.hitboxes = []  # type: List[PragmaHitBox]
+
+        self.mesh = PragmaMeshGroup()
+        self.lod_info = PragmaLodInfo()
 
     @property
     def static(self):
@@ -275,6 +346,11 @@ class PragmaModel(PragmaBase):
             for _ in range(base_material_count):
                 skin.append(self.materials[reader.read_uint16()])
             self.skins[skin_id] = skin
+
+        self.mesh.from_file(reader)
+        self.lod_info.from_file(reader)
+        self.mesh.read_bodygroups(reader)
+
 
     @staticmethod
     def check_header(reader: ByteIO):
