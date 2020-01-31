@@ -1,8 +1,8 @@
 from enum import IntFlag, auto, IntEnum
 from typing import List
 
-from byte_io_wmd import ByteIO
-from shared import PragmaVector3F, PragmaVector4F
+from .byte_io_wmd import ByteIO
+from .shared import PragmaVector3F, PragmaVector4F
 
 
 class PragmaBase:

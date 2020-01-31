@@ -1,4 +1,4 @@
-from byte_io_wmd import ByteIO
+from .byte_io_wmd import ByteIO
 
 
 class PragmaVector:
