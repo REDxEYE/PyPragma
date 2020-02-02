@@ -87,9 +87,7 @@ class PragmaVector4F(PragmaVector):
         return self.values[2]
 
     def from_file(self, reader: ByteIO):
-        x, y, z, w = list(reader.read_fmt(self.value_type * self.size))
-
-        self._values = [x, y, z, w]
+        self._values = list(reader.read_fmt(self.value_type * self.size))
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 from enum import IntFlag, auto, IntEnum
-from typing import List
+from typing import List, Dict
 
 from .byte_io_wmd import ByteIO
 from .shared import PragmaVector3F, PragmaVector4F
@@ -211,8 +211,8 @@ class PragmaMeshGroup(PragmaBase):
         self.rb_min = PragmaVector3F()
         self.rb_max = PragmaVector3F()
 
-        self.mesh_groups = []
-        self.bodygroups = {}
+        self.mesh_groups = []  # type:List[PragmaMeshV24Plus]
+        self.bodygroups = {} #type: Dict[str,List[PragmaMeshV24Plus]]
 
         self.group_ids = {}
 
@@ -368,4 +368,3 @@ class PragmaModel(PragmaBase):
 
     def set_name(self, name):
         self.name = name
-
