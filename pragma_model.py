@@ -155,6 +155,7 @@ class PragmaSubMesh(PragmaBase):
         self.normals = []
         self.uvs = []
         self.weights = []
+        self.additional_weights = []
         self.indices = []
 
     def from_file(self, reader: ByteIO):
@@ -175,10 +176,11 @@ class PragmaSubMesh(PragmaBase):
         weight_count = reader.read_uint64()
         for _ in range(weight_count):
             self.weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
+
         if self.model.version >= 27:
             weight_count = reader.read_uint64()
             for _ in range(weight_count):
-                self.weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
+                self.additional_weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
         indices_count = reader.read_uint32()
         for _ in range(indices_count):
             self.indices.append(reader.read_fmt('3H'))
