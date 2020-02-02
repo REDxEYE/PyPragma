@@ -259,6 +259,7 @@ class PragmaLodInfo(PragmaBase):
 class PragmaModel(PragmaBase):
     def __init__(self):
         PragmaBase.set_model(self)
+        self.name = ""
         self.version = 0
         self.flags = PragmaModelFlags(0)
         self.eye_offset = PragmaVector3F()
@@ -351,7 +352,6 @@ class PragmaModel(PragmaBase):
         self.lod_info.from_file(reader)
         self.mesh.read_bodygroups(reader)
 
-
     @staticmethod
     def check_header(reader: ByteIO):
         with reader.save_current_pos():
@@ -365,3 +365,7 @@ class PragmaModel(PragmaBase):
 
     def __str__(self):
         return f"{self.__class__.__name__}<{'static' if self.static else 'skinned'}>"
+
+    def set_name(self, name):
+        self.name = name
+
