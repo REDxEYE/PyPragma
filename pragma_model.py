@@ -1,8 +1,8 @@
 from enum import IntFlag, auto, IntEnum
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from .byte_io_wmd import ByteIO
-from .shared import PragmaVector3F, PragmaVector4F
+from .shared import PragmaVector3F, PragmaVector4F, PragmaVector2F
 
 
 class PragmaBase:
@@ -14,7 +14,7 @@ class PragmaBase:
 
 
 class PragmaModelFlags(IntFlag):
-    NONE = auto()
+    NONE = 0
     Static = auto()
     Inanimate = auto()
     Unused1 = auto()
@@ -214,7 +214,7 @@ class PragmaMeshGroup(PragmaBase):
         self.rb_max = PragmaVector3F()
 
         self.mesh_groups = []  # type:List[PragmaMeshV24Plus]
-        self.bodygroups = {} #type: Dict[str,List[PragmaMeshV24Plus]]
+        self.bodygroups = {}  # type: Dict[str,List[PragmaMeshV24Plus]]
 
         self.group_ids = {}
 
@@ -258,6 +258,242 @@ class PragmaLodInfo(PragmaBase):
                 self.lods[lod_id].append(reader.read_fmt('ii'))  # original,replacement
 
 
+class PragmaConstraint(PragmaBase):
+    def __init__(self):
+        self.type = 0
+        self.id_tgt = 0
+        self.collide = 0
+        self.key_value = {}
+
+    def from_file(self, reader: ByteIO):
+        self.type = reader.read_uint8()
+        self.id_tgt = reader.read_uint32()
+        self.collide = reader.read_uint8() == 1
+        arg_count = reader.read_uint8()
+        for _ in range(arg_count):
+            self.key_value[reader.read_ascii_string()] = reader.read_ascii_string()
+
+
+class PragmaCollisionMesh(PragmaBase):
+    def __init__(self):
+        self.parent_bone = None  # type:PragmaBone
+        self.origin = PragmaVector3F()
+        self.surface_materials = ""
+        self.min_bounds = PragmaVector3F()
+        self.max_bounds = PragmaVector3F()
+        self.vertices = []
+        self.indices = []
+        self.volume = 0
+        self.center_of_mass = PragmaVector3F()
+        self.constraints = []  # type:List[PragmaConstraint]
+
+    def from_file(self, reader: ByteIO):
+        self.parent_bone = reader.read_int32()
+        if self.parent_bone == -1:
+            self.parent_bone = 0
+        self.origin.from_file(reader)
+        self.surface_materials = reader.read_ascii_string()
+        self.min_bounds.from_file(reader)
+        self.max_bounds.from_file(reader)
+        vert_count = reader.read_uint64()
+        for _ in range(vert_count):
+            self.vertices.append(reader.read_fmt('3f'))
+        index_count = reader.read_uint64()
+        for _ in range(index_count // 3):
+            self.indices.append(reader.read_fmt('3H'))
+        self.volume = reader.read_double()
+        self.center_of_mass.from_file(reader)
+        constraint_count = reader.read_uint8()
+        for _ in range(constraint_count):
+            constraint = PragmaConstraint()
+            constraint.from_file(reader)
+            self.constraints.append(constraint)
+
+
+class PragmaSoftBodyInfo(PragmaBase):
+    def __init__(self):
+        pass
+
+    def from_file(self, reader: ByteIO):
+        softbody_data = reader.read_uint8() == 1
+        if softbody_data:
+            raise NotImplementedError('SoftBody physics not yet implemented')
+        else:
+            return
+
+
+class PragmaCollisionMeshInfo(PragmaBase):
+    def __init__(self):
+        self.mass = 0
+        self.meshes = []
+        self.softbody_info = PragmaSoftBodyInfo()
+
+    def from_file(self, reader: ByteIO):
+        self.mass = reader.read_float()
+        mesh_count = reader.read_uint8()
+        for i in range(mesh_count):
+            mesh = PragmaCollisionMesh()
+            mesh.from_file(reader)
+            self.meshes.append(mesh)
+        if self.model.version >= 20:
+            self.softbody_info.from_file(reader)
+
+
+class PragmaBlendController(PragmaBase):
+    def __init__(self):
+        self.name = ''
+        self.min = 0
+        self.max = 0
+        self.loop = False
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        self.min, self.max = reader.read_fmt('ii')
+        self.loop = reader.read_uint8() == 1
+
+
+class PragmaIKController(PragmaBase):
+    def __init__(self):
+        self.name = ""
+        self.type = ""
+        self.chain_len = 0
+        self.method = 0
+        self.key_values = {}
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        self.type = reader.read_ascii_string()
+        self.chain_len = reader.read_uint32()
+        self.method = reader.read_uint32()
+        for _ in range(reader.read_uint32()):
+            self.key_values[reader.read_ascii_string()] = reader.read_ascii_string()
+
+    pass
+
+
+class PragmaArmatureAnimationsFlags(IntFlag):
+    NONE = 0
+    Loop = 1
+    NoRepeat = 2
+    MoveX = 32
+    MoveZ = 64
+    Autoplay = 128
+    Gesture = 256
+    NoMoveBlend = 512
+
+
+class PragmaArmatureAnimationFrame(PragmaBase):
+    def __init__(self, anim: 'PragmaArmatureAnimation'):
+        self._anim = anim
+        self.pos = []  # type:List[PragmaVector3F]
+        self.rot = []  # type:List[PragmaVector4F]
+        self.events = {}  # type: Dict[str,List[str]]
+        self.move = PragmaVector2F()
+
+    def from_file(self, reader: ByteIO):
+        for _ in self._anim.bones:
+            pos = PragmaVector3F()
+            pos.from_file(reader)
+            quat = PragmaVector4F()
+            quat.from_file(reader)
+            self.pos.append(pos)
+            self.rot.append(quat)
+        for _ in range(reader.read_uint16()):
+            name = reader.read_ascii_string()
+            params = []
+            for _ in range(reader.read_uint8()):
+                params.append(reader.read_ascii_string())
+            self.events[name] = params
+        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveX:
+            self.move.x = reader.read_float()
+        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveZ:
+            self.move.y = reader.read_float()
+
+
+class PragmaArmatureAnimation(PragmaBase):
+    def __init__(self):
+        self.name = ""
+        self.activity_name = ""
+        self.activity_weight = ""
+        self.flags = PragmaArmatureAnimationsFlags(0)
+        self.fps = 0
+        self.min = PragmaVector3F()
+        self.max = PragmaVector3F()
+        self.fade_in = False
+        self.fade_in_time = 0.0
+        self.fade_out = False
+        self.fade_out_time = 0.0
+        self.bones = []
+        self.weights = []
+        self.controller = PragmaBlendController()  # type:PragmaBlendController
+        self.transitions = []  # type: List[Tuple[int,int]] #animationId,transition
+
+        self.frames = []  # type: List[PragmaArmatureAnimationFrame]
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        self.activity_name = reader.read_ascii_string()
+        self.activity_weight = reader.read_uint8()
+        self.flags = reader.read_uint32()
+        self.fps = reader.read_uint32()
+        self.min.from_file(reader)
+        self.max.from_file(reader)
+        self.fade_in = reader.read_uint8() == 1
+        if self.fade_in:
+            self.fade_in_time = reader.read_float()
+        self.fade_out = reader.read_uint8() == 1
+        if self.fade_out:
+            self.fade_out_time = reader.read_float()
+
+        for _ in range(reader.read_uint32()):
+            self.bones.append(reader.read_uint32())
+
+        if reader.read_uint8() == 1:
+            for _ in range(len(self.bones)):
+                self.weights.append(reader.read_float())
+
+        if reader.read_uint8() == 1:
+            self.controller = self.model.blend_controllers[reader.read_uint32()]
+            for _ in range(reader.read_uint32()):
+                self.transitions.append(reader.read_fmt('Ii'))
+
+        for _ in range(reader.read_uint32()):
+            frame = PragmaArmatureAnimationFrame(self)
+            frame.from_file(reader)
+            self.frames.append(frame)
+
+    @property
+    def has_movement(self):
+        return self.flags & PragmaArmatureAnimationsFlags.MoveX or self.flags & PragmaArmatureAnimationsFlags.MoveZ
+
+
+class PragmaVertexAnimations(PragmaBase):
+    def __init__(self):
+        self.name = ""
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        for _ in range(reader.read_uint32()):
+            pass
+
+
+
+class PragmaAnimationInfo(PragmaBase):
+    def __init__(self):
+        self.armature_animations = []  # type:List[PragmaArmatureAnimation]
+        self.vertex_animations = []  # type:List[PragmaVertexAnimations]
+
+    def from_file(self, reader: ByteIO):
+        for _ in range(reader.read_uint32()):
+            arm_anim = PragmaArmatureAnimation()
+            arm_anim.from_file(reader)
+            self.armature_animations.append(arm_anim)
+        if self.model.version >= 21:
+            for _ in range(reader.read_uint32()):
+                vert_anim = PragmaVertexAnimations()
+                vert_anim.from_file(reader)
+
+
 class PragmaModel(PragmaBase):
     def __init__(self):
         PragmaBase.set_model(self)
@@ -284,6 +520,11 @@ class PragmaModel(PragmaBase):
 
         self.mesh = PragmaMeshGroup()
         self.lod_info = PragmaLodInfo()
+        self.collision_mesh = PragmaCollisionMeshInfo()
+
+        self.blend_controllers = []  # type:List[PragmaBlendController]
+        self.ik_controllers = []  # type:List[PragmaIKController]
+        self.animation_info = PragmaAnimationInfo()
 
     @property
     def static(self):
@@ -353,6 +594,22 @@ class PragmaModel(PragmaBase):
         self.mesh.from_file(reader)
         self.lod_info.from_file(reader)
         self.mesh.read_bodygroups(reader)
+        self.collision_mesh.from_file(reader)
+
+        if self.skinned:
+            blend_controllers_count = reader.read_uint16()
+            for _ in range(blend_controllers_count):
+                controller = PragmaBlendController()
+                controller.from_file(reader)
+                self.blend_controllers.append(controller)
+            if self.version >= 22:
+                ik_controllers_count = reader.read_uint32()
+                for _ in range(ik_controllers_count):
+                    ik_controller = PragmaIKController()
+                    ik_controller.from_file(reader)
+                    self.ik_controllers.append(ik_controller)
+
+            self.animation_info.from_file(reader)
 
     @staticmethod
     def check_header(reader: ByteIO):

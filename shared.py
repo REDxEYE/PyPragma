@@ -5,6 +5,19 @@ class PragmaVector:
     sanitize = True  # disable for speedup
     size = 0
     value_type = "x"
+    value_order = "x"
+
+    def __getattr__(self, item):
+        if item in self.value_order:
+            return self.values[self.value_order.index(item)]
+        else:
+            return self.__dict__[item]
+
+    def __setattr__(self, key, value):
+        if key in self.value_order:
+            self.values[self.value_order.index(key)] = value
+        else:
+            self.__dict__[key] = value
 
     @staticmethod
     def validate_input(values):
@@ -39,52 +52,20 @@ class PragmaVector:
 class PragmaVector2F(PragmaVector):
     size = 2
     value_type = 'f'
-
-    @property
-    def x(self):
-        return self.values[0]
-
-    @property
-    def y(self):
-        return self.values[1]
+    value_order = "xy"
 
 
 class PragmaVector3F(PragmaVector):
     size = 3
     value_type = 'f'
-
-    @property
-    def x(self):
-        return self.values[0]
-
-    @property
-    def y(self):
-        return self.values[1]
-
-    @property
-    def z(self):
-        return self.values[2]
+    value_order = 'xyz'
 
 
 class PragmaVector4F(PragmaVector):
     size = 4
     value_type = 'f'
+    value_order = 'wxyz'
 
-    @property
-    def x(self):
-        return self.values[0]
-
-    @property
-    def y(self):
-        return self.values[1]
-
-    @property
-    def z(self):
-        return self.values[2]
-
-    @property
-    def w(self):
-        return self.values[2]
 
     def from_file(self, reader: ByteIO):
         self._values = list(reader.read_fmt(self.value_type * self.size))
