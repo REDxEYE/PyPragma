@@ -102,7 +102,7 @@ class PragmaObjectAttachmentType(IntEnum):
 
 class PragmaObjectAttachment(PragmaBase):
     def __init__(self):
-        self.type = 0
+        self.type = PragmaObjectAttachmentType(0)
         self.name = ''
         self.attachment = ''
         self.key_values = {}
@@ -467,31 +467,112 @@ class PragmaArmatureAnimation(PragmaBase):
         return self.flags & PragmaArmatureAnimationsFlags.MoveX or self.flags & PragmaArmatureAnimationsFlags.MoveZ
 
 
-class PragmaVertexAnimations(PragmaBase):
+class PragmaVertexMeshAnimationFrameFlags(IntFlag):
+    NONE = 0
+    HasDeltaValues = 1
+
+
+class PragmaVertexMeshAnimation(PragmaBase):
+    def __init__(self):
+        self.meshgroup_id = 0
+        self.mesh_id = 0
+        self.submesh_id = 0
+        self.frames = []
+
+    def from_file(self, reader: ByteIO):
+        # for _ in range(reader.read_uint32()):
+            self.meshgroup_id = reader.read_uint32()
+            self.mesh_id = reader.read_uint32()
+            self.submesh_id = reader.read_uint32()
+            for _ in range(reader.read_uint32()):
+                flags = PragmaVertexMeshAnimationFrameFlags(0)
+                if self.model.version >= 25:
+                    flags = PragmaVertexMeshAnimationFrameFlags(reader.read_uint8())
+                verts = []
+                for _ in range(reader.read_uint16()):
+                    idx = reader.read_uint16()
+                    v = PragmaVector3F()
+                    v.from_file(reader)
+                    delta = 0
+                    if flags & PragmaVertexMeshAnimationFrameFlags.HasDeltaValues:
+                        delta = reader.read_uint16()
+                    verts.append((idx, v, delta))
+                self.frames.append(verts)
+
+            pass
+
+
+class PragmaVertexAnimation(PragmaBase):
     def __init__(self):
         self.name = ""
+        self.mesh_animations = []  # type: List[PragmaVertexMeshAnimation]
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
         for _ in range(reader.read_uint32()):
-            pass
+            mesh_anim = PragmaVertexMeshAnimation()
+            mesh_anim.from_file(reader)
+            self.mesh_animations.append(mesh_anim)
 
+
+class PragmaFlexInfo(PragmaBase):
+    def __init__(self):
+        self.name = ''
+        self.vert_anim_ind = 0
+        self.mesh_ind = 0
+        self.frame_ind = 0
+        self.ops = []  # type:List[Tuple[int,float]]
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        self.vert_anim_ind = reader.read_uint32()
+        self.mesh_ind = reader.read_uint32()
+        self.frame_ind = reader.read_uint32()
+        for _ in range(reader.read_uint32()):
+            self.ops.append((reader.read_uint32(), reader.read_float()))
+
+
+class PragmaPhoneme(PragmaBase):
+    def __init__(self):
+        self.name = ''
+        self.flex_controllers = []
+
+    def from_file(self, reader: ByteIO):
+        self.name = reader.read_ascii_string()
+        for _ in range(reader.read_uint32()):
+            self.flex_controllers.append((reader.read_uint32(), reader.read_float()))
 
 
 class PragmaAnimationInfo(PragmaBase):
     def __init__(self):
         self.armature_animations = []  # type:List[PragmaArmatureAnimation]
-        self.vertex_animations = []  # type:List[PragmaVertexAnimations]
+        self.vertex_animations = []  # type:List[PragmaVertexAnimation]
+        self.flex_controllers = []  # type:List[Tuple[str,float,float]] # name,min,max
+        self.flex_infos = []  # type:List[PragmaFlexInfo]
+        self.phonemes = []  # type:List[PragmaPhoneme]
 
     def from_file(self, reader: ByteIO):
-        for _ in range(reader.read_uint32()):
+        armature_animation_count = reader.read_uint32()
+        for _ in range(armature_animation_count):
             arm_anim = PragmaArmatureAnimation()
             arm_anim.from_file(reader)
             self.armature_animations.append(arm_anim)
         if self.model.version >= 21:
-            for _ in range(reader.read_uint32()):
-                vert_anim = PragmaVertexAnimations()
+            vertex_anim_count = reader.read_uint32()
+            for _ in range(vertex_anim_count):
+                vert_anim = PragmaVertexAnimation()
                 vert_anim.from_file(reader)
+                self.vertex_animations.append(vert_anim)
+
+            for _ in range(reader.read_uint32()):
+                flex_info = PragmaFlexInfo()
+                flex_info.from_file(reader)
+                self.flex_infos.append(flex_info)
+
+            for _ in range(reader.read_uint32()):
+                phoneme = PragmaPhoneme()
+                phoneme.from_file(reader)
+                self.phonemes.append(phoneme)
 
 
 class PragmaModel(PragmaBase):
