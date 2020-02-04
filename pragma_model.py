@@ -157,6 +157,7 @@ class PragmaSubMesh(PragmaBase):
         self.weights = []
         self.additional_weights = []
         self.indices = []
+        self.flexes = {}
 
     def from_file(self, reader: ByteIO):
         if self.model.version >= 26:
@@ -189,6 +190,7 @@ class PragmaSubMesh(PragmaBase):
 class PragmaMeshV24Plus(PragmaBase):
     def __init__(self):
         self.name = ''
+        self.meshes = []  # type:List[List[PragmaSubMesh]]
         self.sub_meshes = []  # type: List[PragmaSubMesh]
 
     def __repr__(self):
@@ -198,6 +200,7 @@ class PragmaMeshV24Plus(PragmaBase):
         self.name = reader.read_ascii_string()
         mesh_count = reader.read_uint8()
         for _ in range(mesh_count):
+            meshes = []
             if self.model.version <= 23:
                 pass  # TODO
             else:
@@ -206,6 +209,8 @@ class PragmaMeshV24Plus(PragmaBase):
                     sub_mesh = PragmaSubMesh()
                     sub_mesh.from_file(reader)
                     self.sub_meshes.append(sub_mesh)
+                    meshes.append(sub_mesh)
+            self.meshes.append(meshes)
 
 
 class PragmaMeshGroup(PragmaBase):
@@ -478,11 +483,14 @@ class PragmaVertexMeshAnimation(PragmaBase):
         self.mesh_id = 0
         self.submesh_id = 0
         self.frames = []
+        self.target_submesh = PragmaSubMesh()
 
     def from_file(self, reader: ByteIO):
         self.meshgroup_id = reader.read_uint32()
         self.mesh_id = reader.read_uint32()
         self.submesh_id = reader.read_uint32()
+        self.target_submesh = self.model.mesh.mesh_groups[self.meshgroup_id].meshes[self.mesh_id][self.submesh_id]
+
         for _ in range(reader.read_uint32()):
             flags = PragmaVertexMeshAnimationFrameFlags(0)
             if self.model.version >= 25:
