@@ -2,7 +2,7 @@ from enum import IntFlag, auto, IntEnum
 from typing import List, Dict, Tuple
 
 from .byte_io_wmd import ByteIO
-from .shared import PragmaVector3F, PragmaVector4F, PragmaVector2F
+from .shared import PragmaVector3F, PragmaVector4F, PragmaVector2F, PragmaVector3H, PragmaVector3HF
 
 
 class PragmaBase:
@@ -480,26 +480,25 @@ class PragmaVertexMeshAnimation(PragmaBase):
         self.frames = []
 
     def from_file(self, reader: ByteIO):
-        # for _ in range(reader.read_uint32()):
-            self.meshgroup_id = reader.read_uint32()
-            self.mesh_id = reader.read_uint32()
-            self.submesh_id = reader.read_uint32()
-            for _ in range(reader.read_uint32()):
-                flags = PragmaVertexMeshAnimationFrameFlags(0)
-                if self.model.version >= 25:
-                    flags = PragmaVertexMeshAnimationFrameFlags(reader.read_uint8())
-                verts = []
-                for _ in range(reader.read_uint16()):
-                    idx = reader.read_uint16()
-                    v = PragmaVector3F()
-                    v.from_file(reader)
-                    delta = 0
-                    if flags & PragmaVertexMeshAnimationFrameFlags.HasDeltaValues:
-                        delta = reader.read_uint16()
-                    verts.append((idx, v, delta))
-                self.frames.append(verts)
+        self.meshgroup_id = reader.read_uint32()
+        self.mesh_id = reader.read_uint32()
+        self.submesh_id = reader.read_uint32()
+        for _ in range(reader.read_uint32()):
+            flags = PragmaVertexMeshAnimationFrameFlags(0)
+            if self.model.version >= 25:
+                flags = PragmaVertexMeshAnimationFrameFlags(reader.read_uint8())
+            verts = []
+            for _ in range(reader.read_uint16()):
+                idx = reader.read_uint16()
+                v = PragmaVector3HF()
+                v.from_file(reader)
+                delta = 0
+                if flags & PragmaVertexMeshAnimationFrameFlags.HasDeltaValues:
+                    delta = reader.read_uint16()
+                verts.append((idx, v, delta))
+            self.frames.append(verts)
 
-            pass
+        pass
 
 
 class PragmaVertexAnimation(PragmaBase):
@@ -563,6 +562,9 @@ class PragmaAnimationInfo(PragmaBase):
                 vert_anim = PragmaVertexAnimation()
                 vert_anim.from_file(reader)
                 self.vertex_animations.append(vert_anim)
+
+            for _ in range(reader.read_uint32()):
+                self.flex_controllers.append((reader.read_ascii_string(), reader.read_float(), reader.read_float()))
 
             for _ in range(reader.read_uint32()):
                 flex_info = PragmaFlexInfo()

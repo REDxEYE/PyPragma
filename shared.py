@@ -61,11 +61,21 @@ class PragmaVector3F(PragmaVector):
     value_order = 'xyz'
 
 
+class PragmaVector3H(PragmaVector3F):
+    value_type = 'H'
+
+
+class PragmaVector3HF(PragmaVector3F):
+    value_type = 'x'
+
+    def from_file(self, reader: ByteIO):
+        self._values = [reader.read_float16() for _ in range(self.size)]
+
+
 class PragmaVector4F(PragmaVector):
     size = 4
     value_type = 'f'
     value_order = 'wxyz'
-
 
     def from_file(self, reader: ByteIO):
         self._values = list(reader.read_fmt(self.value_type * self.size))
