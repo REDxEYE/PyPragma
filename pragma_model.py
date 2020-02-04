@@ -519,6 +519,7 @@ class PragmaVertexAnimation(PragmaBase):
         for _ in range(reader.read_uint32()):
             mesh_anim = PragmaVertexMeshAnimation()
             mesh_anim.from_file(reader)
+            mesh_anim.target_submesh.flexes[self.name] = mesh_anim
             self.mesh_animations.append(mesh_anim)
 
     def __repr__(self):
