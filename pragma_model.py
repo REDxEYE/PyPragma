@@ -513,6 +513,9 @@ class PragmaVertexAnimation(PragmaBase):
             mesh_anim.from_file(reader)
             self.mesh_animations.append(mesh_anim)
 
+    def __repr__(self):
+        return f"VertexAnimation<{self.name}>(meshes:{len(self.mesh_animations)})"
+
 
 class PragmaFlexInfo(PragmaBase):
     def __init__(self):
@@ -530,6 +533,9 @@ class PragmaFlexInfo(PragmaBase):
         for _ in range(reader.read_uint32()):
             self.ops.append((reader.read_uint32(), reader.read_float()))
 
+    def __repr__(self):
+        return f"FlexInfo<{self.name}>(operators:{len(self.ops)})"
+
 
 class PragmaPhoneme(PragmaBase):
     def __init__(self):
@@ -540,6 +546,9 @@ class PragmaPhoneme(PragmaBase):
         self.name = reader.read_ascii_string()
         for _ in range(reader.read_uint32()):
             self.flex_controllers.append((reader.read_uint32(), reader.read_float()))
+
+    def __repr__(self):
+        return f"Phoneme<{self.name}>(flex controllers:{len(self.flex_controllers)})"
 
 
 class PragmaAnimationInfo(PragmaBase):
