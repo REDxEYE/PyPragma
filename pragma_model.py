@@ -31,7 +31,8 @@ class PragmaIKController(PragmaBase):
         self.chain_len = reader.read_uint32()
         self.method = reader.read_uint32()
         for _ in range(reader.read_uint32()):
-            self.key_values[reader.read_ascii_string()] = reader.read_ascii_string()
+            key = reader.read_ascii_string()
+            self.key_values[key] = reader.read_ascii_string()
 
     def to_file(self, writer: ByteIO):
         writer.write_ascii_string(self.name)
@@ -85,6 +86,11 @@ class PragmaModel(PragmaBase):
         self.blend_controllers = []  # type:List[PragmaBlendController]
         self.ik_controllers = []  # type:List[PragmaIKController]
         self.animation_info = PragmaAnimationInfo()
+
+        self.offsets_offset = 0
+        self.skinned_data_offset = 0
+
+        self.include_models = []  # type:List[str]
 
     @property
     def static(self):
@@ -174,6 +180,8 @@ class PragmaModel(PragmaBase):
                     self.ik_controllers.append(ik_controller)
 
             self.animation_info.from_file(reader)
+        for _ in range(reader.read_uint8()):
+            self.include_models.append(reader.read_ascii_string())
 
     def to_file(self, writer: ByteIO):
         writer.write_ascii_string("WMD", False)
@@ -181,14 +189,14 @@ class PragmaModel(PragmaBase):
         writer.write_uint32(self.flags.value)
         self.eye_offset.to_file(writer)
 
-        offsets_offset = writer.tell()
+        self.offsets_offset = offsets_offset = writer.tell()
         writer.write_uint64(0)
         writer.write_uint64(0)
         writer.write_uint64(0)
         writer.write_uint64(0)
         writer.write_uint64(0)
 
-        offsets_skinned_data = writer.tell()
+        self.skinned_data_offset = offsets_skinned_data = writer.tell()
         if self.skinned:
             writer.write_uint64(0)
             writer.write_uint64(0)
@@ -269,11 +277,26 @@ class PragmaModel(PragmaBase):
             writer.write_uint16(len(self.blend_controllers))
             for blend in self.blend_controllers:
                 blend.to_file(writer)
+
+            ik_offset = writer.tell()
+            with writer.save_current_pos():
+                writer.seek(offsets_skinned_data + 48)
+                writer.write_uint64(ik_offset)
+
             writer.write_uint32(len(self.ik_controllers))
             for ik in self.ik_controllers:
                 ik.to_file(writer)
 
+            animations_offset = writer.tell()
+            with writer.save_current_pos():
+                writer.seek(offsets_skinned_data + 8)
+                writer.write_uint64(animations_offset)
+
             self.animation_info.to_file(writer)
+
+        writer.write_uint8(len(self.include_models))
+        for s in self.include_models:
+            writer.write_ascii_string(s)
 
     @staticmethod
     def check_header(reader: ByteIO):

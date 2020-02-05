@@ -15,7 +15,8 @@ class PragmaConstraint(PragmaBase):
         self.collide = reader.read_uint8() == 1
         arg_count = reader.read_uint8()
         for _ in range(arg_count):
-            self.key_value[reader.read_ascii_string()] = reader.read_ascii_string()
+            key = reader.read_ascii_string()
+            self.key_value[key] = reader.read_ascii_string()
 
     def to_file(self, writer: ByteIO):
         writer.write_uint8(self.type)

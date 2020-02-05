@@ -150,7 +150,13 @@ class PragmaArmatureAnimation(PragmaBase):
 
         writer.write_uint32(len(self.bones))
         for w in self.bones:
-            writer.write_float(w)
+            writer.write_uint32(w)
+
+        writer.write_int8(len(self.weights) > 0)
+        if self.weights:
+            writer.write_uint32(len(self.weights))
+            for w in self.weights:
+                writer.write_float(w)
 
         writer.write_uint8(self.controller.name != '')
         if self.controller.name != '':

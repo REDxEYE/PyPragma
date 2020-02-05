@@ -21,7 +21,8 @@ class PragmaObjectAttachment(PragmaBase):
         self.name = reader.read_ascii_string()
         self.attachment = reader.read_ascii_string()
         for _ in range(reader.read_uint32()):
-            self.key_values[reader.read_ascii_string()] = reader.read_ascii_string()
+            key = reader.read_ascii_string()
+            self.key_values[key] = reader.read_ascii_string()
 
     def to_file(self, writer: ByteIO):
         writer.write_uint32(self.type.value)

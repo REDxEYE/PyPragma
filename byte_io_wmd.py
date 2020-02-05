@@ -292,18 +292,20 @@ class ByteIO:
     def write_bytes(self, data):
         self._write(data)
 
-    def write_float16(self, data):
-        if data!=0.0:
+    def write_float16(self, data: float):
+        # if data != 0.0:
             fltInt32 = struct.unpack('I', struct.pack('f', data))[0]
             fltInt16 = (fltInt32 >> 31) << 5
             tmp = (fltInt32 >> 23) & 0xff
             tmp = (tmp - 0x70) & struct.unpack('I', struct.pack('i', (0x70 - tmp) >> 4))[0] >> 27
             fltInt16 = (fltInt16 | tmp) << 10
             fltInt16 |= (fltInt32 >> 13) & 0x3ff
+            if fltInt32 & 0x80000000:
+                fltInt16 |= 0x8000
             self._write(struct.pack('H', fltInt16))
-        else:
-            self.write_uint16(0)
-        pass
+        # else:
+        #     self.write_uint16(0)
+        # pass
 
 
 if __name__ == '__main__':
