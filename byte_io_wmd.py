@@ -9,8 +9,10 @@ from io import BytesIO
 class OffsetOutOfBounds(Exception):
     pass
 
+
 def split(array, n=3):
     return [array[i:i + n] for i in range(0, len(array), n)]
+
 
 class ByteIO:
     @contextlib.contextmanager
@@ -56,7 +58,7 @@ class ByteIO:
     def preview_f(self):
         with self.save_current_pos():
             block = self.read_bytes(64)
-            hex_values = split(split(binascii.hexlify(block).decode().upper(),2),4)
+            hex_values = split(split(binascii.hexlify(block).decode().upper(), 2), 4)
             return [' '.join(b) for b in hex_values]
 
     def __repr__(self):
@@ -224,6 +226,9 @@ class ByteIO:
     def write(self, t, value):
         self._write(struct.pack(t, value))
 
+    def write_fmt(self, t, *value):
+        self._write(struct.pack(t, *value))
+
     def write_uint64(self, value):
         self.write('Q', value)
 
@@ -254,7 +259,7 @@ class ByteIO:
     def write_double(self, value):
         self.write('d', value)
 
-    def write_ascii_string(self, string, zero_terminated=False, length=-1):
+    def write_ascii_string(self, string, zero_terminated=True, length=-1):
         pos = self.tell()
         for c in string:
             self._write(c.encode('ascii'))
@@ -286,6 +291,19 @@ class ByteIO:
 
     def write_bytes(self, data):
         self._write(data)
+
+    def write_float16(self, data):
+        if data!=0.0:
+            fltInt32 = struct.unpack('I', struct.pack('f', data))[0]
+            fltInt16 = (fltInt32 >> 31) << 5
+            tmp = (fltInt32 >> 23) & 0xff
+            tmp = (tmp - 0x70) & struct.unpack('I', struct.pack('i', (0x70 - tmp) >> 4))[0] >> 27
+            fltInt16 = (fltInt16 | tmp) << 10
+            fltInt16 |= (fltInt32 >> 13) & 0x3ff
+            self._write(struct.pack('H', fltInt16))
+        else:
+            self.write_uint16(0)
+        pass
 
 
 if __name__ == '__main__':

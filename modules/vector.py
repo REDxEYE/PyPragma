@@ -1,4 +1,4 @@
-from .byte_io_wmd import ByteIO
+from PyWMD.byte_io_wmd import ByteIO
 
 
 class PragmaVector:
@@ -37,6 +37,10 @@ class PragmaVector:
     def from_file(self, reader: ByteIO):
         self._values = list(reader.read_fmt(self.value_type * self.size))
 
+    def to_file(self, writer: ByteIO):
+        for value in self.values:
+            writer.write(self.value_type, value)
+
     @property
     def values(self):
         return self._values
@@ -71,6 +75,9 @@ class PragmaVector3HF(PragmaVector3F):
     def from_file(self, reader: ByteIO):
         self._values = [reader.read_float16() for _ in range(self.size)]
 
+    def to_file(self, writer: ByteIO):
+        for v in self._values:
+            writer.write_float16(v)
 
 class PragmaVector4F(PragmaVector):
     size = 4
