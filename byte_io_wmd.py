@@ -293,37 +293,22 @@ class ByteIO:
         self._write(data)
 
     def write_float16(self, data: float):
-        # if data != 0.0:
-            fltInt32 = struct.unpack('I', struct.pack('f', data))[0]
-            fltInt16 = (fltInt32 >> 31) << 5
-            tmp = (fltInt32 >> 23) & 0xff
-            tmp = (tmp - 0x70) & struct.unpack('I', struct.pack('i', (0x70 - tmp) >> 4))[0] >> 27
-            fltInt16 = (fltInt16 | tmp) << 10
-            fltInt16 |= (fltInt32 >> 13) & 0x3ff
-            if fltInt32 & 0x80000000:
-                fltInt16 |= 0x8000
-            self._write(struct.pack('H', fltInt16))
-        # else:
-        #     self.write_uint16(0)
-        # pass
+        flt_int32 = struct.unpack('I', struct.pack('f', data))[0]
+        flt_int16 = (flt_int32 >> 31) << 5
+        tmp = (flt_int32 >> 23) & 0xff
+        tmp = (tmp - 0x70) & struct.unpack('I', struct.pack('i', (0x70 - tmp) >> 4))[0] >> 27
+        flt_int16 = (flt_int16 | tmp) << 10
+        flt_int16 |= (flt_int32 >> 13) & 0x3ff
+        if flt_int32 & 0x80000000:
+            flt_int16 |= 0x8000
+        self._write(struct.pack('H', flt_int16))
 
 
 if __name__ == '__main__':
     a = ByteIO(path=r'./test.bin', mode='w')
     a.write_fourcc("IDST")
-    # a.write_int8(108)
-    # a.write_uint32(104)
-    # a.write_to_offset(1024,a.write_uint32,84,True)
-    # a.write_double(15.58)
-    # a.write_float(18.58)
-    # a.write_uint64(18564846516)
-    # a.write_ascii_string('Test123')
+
     a.close()
     a = ByteIO(file=open(r'./test.bin', mode='rb'))
     print(a.peek_uint32())
-    # print(a.read_from_offset(1024,a.read_uint32))
-    # print(a.read_uint32())
-    # print(a.read_double())
-    # print(a.read_float())
-    # print(a.read_uint64())
-    # print(a.read_ascii_string())
+

@@ -79,6 +79,7 @@ class PragmaVector3HF(PragmaVector3F):
         for v in self._values:
             writer.write_float16(v)
 
+
 class PragmaVector4F(PragmaVector):
     size = 4
     value_type = 'f'
