@@ -249,8 +249,8 @@ class PragmaModel(PragmaBase):
             mesh_offset = writer.tell()
             with writer.save_current_pos():
                 writer.seek(offsets_offset + 8)
-                # writer.write_uint64(mesh_offset)
-                writer.write_uint64(0)
+                writer.write_uint64(mesh_offset)
+                # writer.write_uint64(0)
 
             self.mesh.to_file(writer)
 
