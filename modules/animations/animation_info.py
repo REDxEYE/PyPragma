@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from .. import PragmaBase, PragmaArmatureAnimation, PragmaVertexAnimation, PragmaFlexInfo, PragmaPhoneme, PragmaEyeball
+from .. import PragmaBase, PragmaArmatureAnimation, PragmaVertexAnimation, PragmaFlexInfo, PragmaPhoneme
 from ...byte_io_wmd import ByteIO
 
 
