@@ -94,10 +94,12 @@ class PragmaArmatureAnimation(PragmaBase):
         self.weights = []
         self.controller = PragmaBlendController()  # type:PragmaBlendController
         self.transitions = []  # type: List[Tuple[int,int]] #animationId,transition
+        self.animationPostBlendController = -1
+        self.animationPostBlendTarget = -1
 
         self.frames = []  # type: List[PragmaArmatureAnimationFrame]
 
-    def from_file(self, reader: ByteIO):
+    def from_file(self, mdl, reader: ByteIO):
         self.name = reader.read_ascii_string()
         self.activity_name = reader.read_ascii_string()
         self.activity_weight = reader.read_uint8()
@@ -122,7 +124,13 @@ class PragmaArmatureAnimation(PragmaBase):
         if reader.read_uint8() == 1:
             self.controller = self.model.blend_controllers[reader.read_uint32()]
             for _ in range(reader.read_uint32()):
-                self.transitions.append(reader.read_fmt('Ii'))
+                if mdl.version >= 29:
+                    self.transitions.append(reader.read_float())
+                else:
+                    self.transitions.append(reader.read_fmt('Ii'))
+            if mdl.version >= 29:
+                self.animationPostBlendController = reader.read_int32()
+                self.animationPostBlendTarget = reader.read_int32()
 
         for _ in range(reader.read_uint32()):
             frame = PragmaArmatureAnimationFrame(self)
@@ -163,7 +171,9 @@ class PragmaArmatureAnimation(PragmaBase):
             writer.write_uint32(self.model.blend_controllers.index(self.controller))
             writer.write_uint32(len(self.transitions))
             for t in self.transitions:
-                writer.write_fmt('Ii', *t)
+                writer.write_float(t)
+            writer.write_int32(self.animationPostBlendController)
+            writer.write_int32(self.animationPostBlendTarget)
 
         writer.write_uint32(len(self.frames))
         for frame in self.frames:
