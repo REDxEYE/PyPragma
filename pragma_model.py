@@ -16,10 +16,6 @@ class PragmaModelFlags(IntFlag):
     Unused5 = auto()
     DontPrecacheTextureGroups = auto()
 
-
-
-
-
 class PragmaModel(PragmaBase):
     def __init__(self):
         PragmaBase.set_model(self)
@@ -41,6 +37,7 @@ class PragmaModel(PragmaBase):
         self.offset_flexes = 0
         self.offset_phoneme_map = 0
         self.index_offset_ik_controllers = 0
+        self.index_offset_eyeballs = 0
 
         self.material_paths = []
         self.materials = []
@@ -96,6 +93,8 @@ class PragmaModel(PragmaBase):
                 self.offset_phoneme_map = reader.read_uint64()
             if self.version >= 22:
                 self.index_offset_ik_controllers = reader.read_uint64()
+            if self.version >= 28:
+                self.index_offset_eyeballs = reader.read_uint64()
 
         material_path_count = reader.read_uint8()
         for i in range(material_path_count):
@@ -152,13 +151,13 @@ class PragmaModel(PragmaBase):
                     ik_controller.from_file(reader)
                     self.ik_controllers.append(ik_controller)
 
-            self.animation_info.from_file(reader)
+            self.animation_info.from_file(self,reader)
         for _ in range(reader.read_uint8()):
             self.include_models.append(reader.read_ascii_string())
 
     def to_file(self, writer: ByteIO):
         writer.write_ascii_string("WMD", False)
-        writer.write_uint16(27)  # version
+        writer.write_uint16(29)  # version
         writer.write_uint32(self.flags.value)
         self.eye_offset.to_file(writer)
 
