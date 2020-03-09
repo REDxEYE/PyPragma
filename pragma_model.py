@@ -1,5 +1,5 @@
-from enum import IntFlag, auto, IntEnum
-from typing import List, Dict, Tuple
+from enum import IntFlag, auto
+from typing import List
 from .modules import *
 
 from .byte_io_wmd import ByteIO
@@ -15,6 +15,7 @@ class PragmaModelFlags(IntFlag):
     Unused4 = auto()
     Unused5 = auto()
     DontPrecacheTextureGroups = auto()
+
 
 class PragmaModel(PragmaBase):
     def __init__(self):
@@ -36,12 +37,15 @@ class PragmaModel(PragmaBase):
         self.offset_flex_controllers = 0
         self.offset_flexes = 0
         self.offset_phoneme_map = 0
-        self.index_offset_ik_controllers = 0
-        self.index_offset_eyeballs = 0
+        self.offset_ik_controllers = 0
+        self.offset_eyeballs = 0
 
         self.material_paths = []
         self.materials = []
         self.skins = []
+
+        self.max_eye_deflection = 30.0  # Degree
+        self.eyeballs = List[PragmaEyeball]
 
         self.armature = PragmaArmature()
 
@@ -92,9 +96,9 @@ class PragmaModel(PragmaBase):
                 self.offset_flexes = reader.read_uint64()
                 self.offset_phoneme_map = reader.read_uint64()
             if self.version >= 22:
-                self.index_offset_ik_controllers = reader.read_uint64()
+                self.offset_ik_controllers = reader.read_uint64()
             if self.version >= 28:
-                self.index_offset_eyeballs = reader.read_uint64()
+                self.offset_eyeballs = reader.read_uint64()
 
         material_path_count = reader.read_uint8()
         for i in range(material_path_count):
@@ -151,7 +155,16 @@ class PragmaModel(PragmaBase):
                     ik_controller.from_file(reader)
                     self.ik_controllers.append(ik_controller)
 
-            self.animation_info.from_file(self,reader)
+            self.animation_info.from_file(reader)
+
+            if self.model.version >= 28:
+                reader.seek(self.offset_eyeballs)
+                self.max_eye_deflection = reader.read_float()
+                for _ in range(reader.read_uint32()):
+                    eyeball = PragmaEyeball()
+                    eyeball.from_file(reader)
+                    self.eyeballs.append(eyeball)
+
         for _ in range(reader.read_uint8()):
             self.include_models.append(reader.read_ascii_string())
 
@@ -178,6 +191,7 @@ class PragmaModel(PragmaBase):
             writer.write_uint64(0)
             writer.write_uint64(0)
 
+            writer.write_uint64(0)
             writer.write_uint64(0)
 
         with writer.save_current_pos():
@@ -265,6 +279,16 @@ class PragmaModel(PragmaBase):
                 writer.write_uint64(animations_offset)
 
             self.animation_info.to_file(writer)
+
+            eyeball_offset = writer.tell()
+            with writer.save_current_pos():
+                writer.seek(self.model.skinned_data_offset + 56)
+                writer.write_uint64(eyeball_offset)
+
+            writer.write_float(self.max_eye_deflection)
+            writer.write_uint32(len(self.eyeballs))
+            for eyeball in self.eyeballs:
+                eyeball.to_file(writer)
 
         writer.write_uint8(len(self.include_models))
         for s in self.include_models:

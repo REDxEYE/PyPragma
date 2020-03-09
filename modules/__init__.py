@@ -34,3 +34,5 @@ from .animations.vertex_animation import PragmaVertexMeshAnimationFrameFlags, \
 from .animations.animation_info import PragmaAnimationInfo
 
 from .ik import PragmaIKController
+
+from .eyeball import PragmaEyeball

@@ -94,12 +94,12 @@ class PragmaArmatureAnimation(PragmaBase):
         self.weights = []
         self.controller = PragmaBlendController()  # type:PragmaBlendController
         self.transitions = []  # type: List[Tuple[int,int]] #animationId,transition
-        self.animationPostBlendController = -1
-        self.animationPostBlendTarget = -1
+        self.animation_post_blend_controller = -1
+        self.animation_post_blend_target = -1
 
         self.frames = []  # type: List[PragmaArmatureAnimationFrame]
 
-    def from_file(self, mdl, reader: ByteIO):
+    def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
         self.activity_name = reader.read_ascii_string()
         self.activity_weight = reader.read_uint8()
@@ -124,13 +124,13 @@ class PragmaArmatureAnimation(PragmaBase):
         if reader.read_uint8() == 1:
             self.controller = self.model.blend_controllers[reader.read_uint32()]
             for _ in range(reader.read_uint32()):
-                if mdl.version >= 29:
+                if self.model.version >= 29:
                     self.transitions.append(reader.read_float())
                 else:
                     self.transitions.append(reader.read_fmt('Ii'))
-            if mdl.version >= 29:
-                self.animationPostBlendController = reader.read_int32()
-                self.animationPostBlendTarget = reader.read_int32()
+            if self.model.version >= 29:
+                self.animation_post_blend_controller = reader.read_int32()
+                self.animation_post_blend_target = reader.read_int32()
 
         for _ in range(reader.read_uint32()):
             frame = PragmaArmatureAnimationFrame(self)
@@ -172,8 +172,8 @@ class PragmaArmatureAnimation(PragmaBase):
             writer.write_uint32(len(self.transitions))
             for t in self.transitions:
                 writer.write_float(t)
-            writer.write_int32(self.animationPostBlendController)
-            writer.write_int32(self.animationPostBlendTarget)
+            writer.write_int32(self.animation_post_blend_controller)
+            writer.write_int32(self.animation_post_blend_target)
 
         writer.write_uint32(len(self.frames))
         for frame in self.frames:
