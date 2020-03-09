@@ -1,4 +1,4 @@
-from PyWMD.byte_io_wmd import ByteIO
+from ..byte_io_wmd import ByteIO
 
 
 class PragmaBase:
@@ -6,8 +6,8 @@ class PragmaBase:
 
     @classmethod
     def set_model(cls, model):
-        from PyWMD.pragma_model import PragmaModel
-        cls.model:PragmaModel = model
+        from ..pragma_model import PragmaModel
+        cls.model: PragmaModel = model
 
     def to_file(self, writer: ByteIO):
         raise NotImplemented
