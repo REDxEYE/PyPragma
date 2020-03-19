@@ -3,9 +3,14 @@ from typing import List
 from . import PragmaVector3F, PragmaBase, PragmaConstraint, PragmaBone
 from ..byte_io_wmd import ByteIO
 
+class PragmaCollisionMeshFlags(IntFlag):
+    NONE = 0
+    SoftBody = 1
+    Convex = SoftBody<<1
 
 class PragmaCollisionMesh(PragmaBase):
     def __init__(self):
+        self.flags = PragmaCollisionMeshFlags(0)
         self.parent_bone = None  # type:PragmaBone
         self.origin = PragmaVector3F()
         self.surface_materials = ""
@@ -16,8 +21,11 @@ class PragmaCollisionMesh(PragmaBase):
         self.volume = 0
         self.center_of_mass = PragmaVector3F()
         self.constraints = []  # type:List[PragmaConstraint]
+        self.softbody_info = PragmaSoftBodyInfo()
 
     def from_file(self, reader: ByteIO):
+        if self.model.version >= 30:
+            self.flags = PragmaCollisionMeshFlags(reader.read_uint64())
         self.parent_bone = reader.read_int32()
         if self.parent_bone == -1:
             self.parent_bone = 0
@@ -38,6 +46,8 @@ class PragmaCollisionMesh(PragmaBase):
             constraint = PragmaConstraint()
             constraint.from_file(reader)
             self.constraints.append(constraint)
+        if self.model.version >= 20:
+            self.softbody_info.from_file(reader,self.model.version,self.flags)
 
     def to_file(self, writer: ByteIO):
         writer.write_int32(self.parent_bone)
@@ -58,13 +68,17 @@ class PragmaCollisionMesh(PragmaBase):
         writer.write_uint8(len(self.constraints))
         for constaint in self.constraints:
             constaint.to_file(writer)
+        self.softbody_info.to_file(writer)
 
 class PragmaSoftBodyInfo(PragmaBase):
     def __init__(self):
         pass
 
-    def from_file(self, reader: ByteIO):
-        softbody_data = reader.read_uint8() == 1
+    def from_file(self, reader: ByteIO, version, self.flags : PragmaCollisionMeshFlags):
+        if version < 30:
+            softbody_data = reader.read_uint8() == 1
+        else:
+            softbody_data = (self.flags &PragmaCollisionMeshFlags.SoftBody) != 0
         if softbody_data:
             raise NotImplementedError('SoftBody physics not yet implemented')
         else:
@@ -78,21 +92,20 @@ class PragmaCollisionMeshInfo(PragmaBase):
     def __init__(self):
         self.mass = 0
         self.meshes = []  # type:List[PragmaCollisionMesh]
-        self.softbody_info = PragmaSoftBodyInfo()
 
     def from_file(self, reader: ByteIO):
         self.mass = reader.read_float()
-        mesh_count = reader.read_uint8()
+        if self.model.version < 30:
+            mesh_count = reader.read_uint8()
+        else
+            mesh_count = reader.read_uint32()
         for i in range(mesh_count):
             mesh = PragmaCollisionMesh()
             mesh.from_file(reader)
             self.meshes.append(mesh)
-        if self.model.version >= 20:
-            self.softbody_info.from_file(reader)
 
     def to_file(self, writer: ByteIO):
         writer.write_float(self.mass)
         writer.write_uint8(len(self.meshes))
         for mesh in self.meshes:
             mesh.to_file(writer)
-        self.softbody_info.to_file(writer)
