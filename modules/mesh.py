@@ -80,7 +80,7 @@ class PragmaSubMesh(PragmaBase):
         if self.model.version < 30:
             indices_count *= 3
         for _ in range(indices_count):
-            self.indices.append(reader.read_fmt('1H'))
+            self.indices.append(reader.read_uint16())
 
     def to_file(self, writer: ByteIO):
         self.pos.to_file(writer)
