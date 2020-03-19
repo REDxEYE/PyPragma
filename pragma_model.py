@@ -4,6 +4,8 @@ from .modules import *
 
 from .byte_io_wmd import ByteIO
 
+MAX_SUPPORTED_VERSION = 30
+
 
 class PragmaModelFlags(IntFlag):
     NONE = 0
@@ -45,7 +47,7 @@ class PragmaModel(PragmaBase):
         self.skins = []
 
         self.max_eye_deflection = 30.0  # Degree
-        self.eyeballs = List[PragmaEyeball]
+        self.eyeballs = []  # type: List[PragmaEyeball]
 
         self.armature = PragmaArmature()
 
@@ -136,11 +138,12 @@ class PragmaModel(PragmaBase):
             for _ in range(base_material_count):
                 skin.append(self.materials[reader.read_uint16()])
             self.skins.append(skin)
-
         self.mesh.from_file(reader)
         self.lod_info.from_file(reader)
         self.mesh.read_bodygroups(reader)
-        self.collision_mesh.from_file(reader)
+        if self.offset_collision_mesh > 0:
+            reader.seek(self.offset_collision_mesh)
+            self.collision_mesh.from_file(reader)
 
         if self.skinned:
             blend_controllers_count = reader.read_uint16()
@@ -170,7 +173,7 @@ class PragmaModel(PragmaBase):
 
     def to_file(self, writer: ByteIO):
         writer.write_ascii_string("WMD", False)
-        writer.write_uint16(29)  # version
+        writer.write_uint16(MAX_SUPPORTED_VERSION)  # version
         writer.write_uint32(self.flags.value)
         self.eye_offset.to_file(writer)
 
@@ -253,6 +256,7 @@ class PragmaModel(PragmaBase):
                 writer.write_uint64(bodygroups_offset)
             self.mesh.write_bodygroups(writer)
 
+            # if self.collision_mesh.meshes and self.collision_mesh.mass > 0.0:
             collision_mesh_offset = writer.tell()
             with writer.save_current_pos():
                 writer.seek(offsets_offset + 32)
@@ -301,7 +305,7 @@ class PragmaModel(PragmaBase):
             if header != "WMD":
                 return False
             version = reader.read_uint16()
-            if version < 20 or version > 27:
+            if version < 20 or version > MAX_SUPPORTED_VERSION:
                 return False
         return True
 

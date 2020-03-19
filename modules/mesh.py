@@ -23,10 +23,11 @@ class PragmaSubMesh(PragmaBase):
 
         self.vertices = []
         self.normals = []
-        self.uvSets = []
-        self.alphas = []
+        self.uv_sets = {}
         self.weights = []
         self.additional_weights = []
+        self.alpha_count = 0
+        self.alphas = []  # type:List[PragmaVector2F]
         self.indices = []
         self.flexes = {}
 
@@ -40,19 +41,21 @@ class PragmaSubMesh(PragmaBase):
             self.geometry_type = PragmaSubMeshGeometryType(reader.read_uint8())
 
         vertex_count = reader.read_uint64()
+        if self.model.version < 30:
+            self.uv_sets["base"] = []
         for _ in range(vertex_count):
             self.vertices.append(reader.read_fmt("3f"))
             self.normals.append(reader.read_fmt("3f"))
             if self.model.version < 30:
-                self.uvs.append(reader.read_fmt("2f"))
+                self.uv_sets["base"].append(reader.read_fmt("2f"))
 
-        if version >= 30:
+        if self.model.version >= 30:
             uv_set_count = reader.read_uint8()
             for _ in range(uv_set_count):
                 uv_set_name = reader.read_ascii_string()
-                self.uvSets[uv_set_name] = []
+                self.uv_sets[uv_set_name] = []
                 for _ in range(vertex_count):
-                    self.uvSets[uv_set_name].append(reader.read_fmt("2f"))
+                    self.uv_sets[uv_set_name].append(reader.read_fmt("2f"))
 
         weight_count = reader.read_uint64()
         for _ in range(weight_count):
@@ -64,12 +67,12 @@ class PragmaSubMesh(PragmaBase):
                 self.additional_weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
 
         if self.model.version >= 30:
-            alpha_count = reader.read_uint8()
-            if alpha_count > 0:
+            self.alpha_count = reader.read_uint8()
+            if self.alpha_count > 0:
                 for _ in range(vertex_count):
                     alpha = PragmaVector2F()
                     alpha.x = reader.read_float()
-                    if alpha_count > 1:
+                    if self.alpha_count > 1:
                         alpha.y = reader.read_float()
                     self.alphas.append(alpha)
 
@@ -88,10 +91,15 @@ class PragmaSubMesh(PragmaBase):
         writer.write_uint8(self.geometry_type.value)
 
         writer.write_uint64(len(self.vertices))
-        for v, n, u in zip(self.vertices, self.normals, self.uvs):
+        for v, n in zip(self.vertices, self.normals):
             writer.write_fmt('3f', *v)
             writer.write_fmt('3f', *n)
-            writer.write_fmt('2f', *u)
+
+        writer.write_uint8(len(self.uv_sets))
+        for uv_set_name, uv_set in self.uv_sets.items():
+            writer.write_ascii_string(uv_set_name)
+            for u in uv_set:
+                writer.write_fmt("2f", *u)
 
         writer.write_uint64(len(self.weights))
         for (b, w) in self.weights:
@@ -103,9 +111,16 @@ class PragmaSubMesh(PragmaBase):
             writer.write_fmt('4i', *b)
             writer.write_fmt('4f', *w)
 
+        writer.write_uint8(self.alpha_count)
+        if self.alphas:
+            for alpha in self.alphas:
+                writer.write_float(alpha.x)
+                if self.alpha_count > 1:
+                    writer.write_float(alpha.y)
+
         writer.write_uint32(len(self.indices))
         for ind in self.indices:
-            writer.write_fmt('3H', *ind)
+            writer.write_fmt('H', *ind)
 
 
 class PragmaMeshV24Plus(PragmaBase):
@@ -119,7 +134,7 @@ class PragmaMeshV24Plus(PragmaBase):
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
-        if self.model.version >= 30:
+        if self.model.version < 30:
             mesh_count = reader.read_uint8()
         else:
             mesh_count = reader.read_uint32()
@@ -138,7 +153,7 @@ class PragmaMeshV24Plus(PragmaBase):
 
     def to_file(self, writer: ByteIO):
         writer.write_ascii_string(self.name)
-        writer.write_uint8(len(self.meshes))
+        writer.write_uint32(len(self.meshes))
         for mesh in self.meshes:
             writer.write_uint32(len(mesh))
             for sub_mesh in mesh:

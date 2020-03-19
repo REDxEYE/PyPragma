@@ -52,6 +52,8 @@ class PragmaVector:
         values = ','.join([str(value) for value in self.values])
         return f"{self.__class__.__name__}({values})"
 
+    def __len__(self):
+        return len(self._values)
 
 class PragmaVector2F(PragmaVector):
     size = 2
