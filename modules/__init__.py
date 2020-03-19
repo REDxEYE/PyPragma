@@ -31,6 +31,8 @@ from .animations.vertex_animation import PragmaVertexMeshAnimationFrameFlags, \
     PragmaPhoneme, \
     PragmaVertexAnimation
 
+from .ik import PragmaIKController
+
 from .animations.animation_info import PragmaAnimationInfo
 
 from .ik import PragmaIKController
