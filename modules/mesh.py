@@ -70,7 +70,7 @@ class PragmaSubMesh(PragmaBase):
             self.alpha_count = reader.read_uint8()
             if self.alpha_count > 0:
                 for _ in range(vertex_count):
-                    alpha = PragmaVector2F()
+                    alpha = PragmaVector2F([0, 0])
                     alpha.x = reader.read_float()
                     if self.alpha_count > 1:
                         alpha.y = reader.read_float()
