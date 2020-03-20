@@ -1,23 +1,23 @@
 from enum import IntEnum
 
 from . import *
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaObjectAttachmentType(IntEnum):
+class ObjectAttachmentType(IntEnum):
     Model = 0
     ParticleSystem = 1
 
 
-class PragmaObjectAttachment(PragmaBase):
+class ObjectAttachment(PragmaBase):
     def __init__(self):
-        self.type = PragmaObjectAttachmentType(0)
+        self.type = ObjectAttachmentType(0)
         self.name = ''
         self.attachment = ''
         self.key_values = {}
 
     def from_file(self, reader: ByteIO):
-        self.type = PragmaObjectAttachmentType(reader.read_uint32())
+        self.type = ObjectAttachmentType(reader.read_uint32())
         self.name = reader.read_ascii_string()
         self.attachment = reader.read_ascii_string()
         for _ in range(reader.read_uint32()):
@@ -39,13 +39,13 @@ class PragmaObjectAttachment(PragmaBase):
         return f"{self.__class__.__name__}({tmp})<attachment:{tmp2} type:{self.type.name}>"
 
 
-class PragmaAttachment(PragmaBase):
+class Attachment(PragmaBase):
     def __init__(self, armature):
         self._armature = armature
         self.name = ''
-        self.bone = None  # type: PragmaBone
-        self.offset = PragmaVector3F()
-        self.angles = PragmaVector3F()
+        self.bone = None  # type: Bone
+        self.offset = Vector3F()
+        self.angles = Vector3F()
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()

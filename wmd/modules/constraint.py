@@ -1,8 +1,8 @@
 from . import PragmaBase
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaConstraint(PragmaBase):
+class Constraint(PragmaBase):
     def __init__(self):
         self.type = 0
         self.id_tgt = 0

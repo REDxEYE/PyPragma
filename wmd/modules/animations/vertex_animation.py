@@ -1,42 +1,42 @@
 from enum import IntFlag
 from typing import List
 
-from .. import PragmaBase, PragmaSubMesh, PragmaVector3HF
-from PyWMD.byte_io_wmd import ByteIO
+from .. import PragmaBase, SubMesh, Vector3HF
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaVertexMeshAnimationFrameFlags(IntFlag):
+class VertexMeshAnimationFrameFlags(IntFlag):
     NONE = 0
     HasDeltaValues = 1
 
 
-class PragmaVertexMeshAnimation(PragmaBase):
+class VertexMeshAnimation(PragmaBase):
     def __init__(self):
         self.meshgroup_id = 0
         self.mesh_id = 0
         self.submesh_id = 0
         self.frames = []
         self.flags = []  # TODO: remove it
-        self.target_submesh = PragmaSubMesh()
+        self.target_submesh = SubMesh()
 
     def from_file(self, reader: ByteIO):
         self.meshgroup_id = reader.read_uint32()
         self.mesh_id = reader.read_uint32()
         self.submesh_id = reader.read_uint32()
-        self.target_submesh = self.model.mesh.mesh_groups[self.meshgroup_id].meshes[self.mesh_id][self.submesh_id]
+        self.target_submesh = self.base.mesh.mesh_groups[self.meshgroup_id].meshes[self.mesh_id][self.submesh_id]
 
         for _ in range(reader.read_uint32()):
-            flags = PragmaVertexMeshAnimationFrameFlags(0)
-            if self.model.version >= 25:
-                flags = PragmaVertexMeshAnimationFrameFlags(reader.read_uint8())
+            flags = VertexMeshAnimationFrameFlags(0)
+            if self.base.version >= 25:
+                flags = VertexMeshAnimationFrameFlags(reader.read_uint8())
             self.flags.append(flags)
             verts = []
             for _ in range(reader.read_uint16()):
                 idx = reader.read_uint16()
-                v = PragmaVector3HF()
+                v = Vector3HF()
                 v.from_file(reader)
                 delta = 0
-                if flags & PragmaVertexMeshAnimationFrameFlags.HasDeltaValues:
+                if flags & VertexMeshAnimationFrameFlags.HasDeltaValues:
                     delta = reader.read_uint16()
                 verts.append((idx, v, delta))
             self.frames.append(verts)
@@ -52,19 +52,19 @@ class PragmaVertexMeshAnimation(PragmaBase):
             for (idx, v, delta) in frame:
                 writer.write_uint16(idx)
                 v.to_file(writer)
-                if flag & PragmaVertexMeshAnimationFrameFlags.HasDeltaValues:
+                if flag & VertexMeshAnimationFrameFlags.HasDeltaValues:
                     writer.write_uint16(delta)
 
 
-class PragmaVertexAnimation(PragmaBase):
+class VertexAnimation(PragmaBase):
     def __init__(self):
         self.name = ""
-        self.mesh_animations = []  # type: List[PragmaVertexMeshAnimation]
+        self.mesh_animations = []  # type: List[VertexMeshAnimation]
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
         for _ in range(reader.read_uint32()):
-            mesh_anim = PragmaVertexMeshAnimation()
+            mesh_anim = VertexMeshAnimation()
             mesh_anim.from_file(reader)
             mesh_anim.target_submesh.flexes[self.name] = mesh_anim
             self.mesh_animations.append(mesh_anim)
@@ -79,7 +79,7 @@ class PragmaVertexAnimation(PragmaBase):
         return f"VertexAnimation<{self.name}>(meshes:{len(self.mesh_animations)})"
 
 
-class PragmaFlexInfo(PragmaBase):
+class FlexInfo(PragmaBase):
     def __init__(self):
         self.name = ''
         self.vert_anim_ind = 0
@@ -108,7 +108,7 @@ class PragmaFlexInfo(PragmaBase):
         return f"FlexInfo<{self.name}>(operators:{len(self.ops)})"
 
 
-class PragmaPhoneme(PragmaBase):
+class Phoneme(PragmaBase):
     def __init__(self):
         self.name = ''
         self.flex_controllers = []

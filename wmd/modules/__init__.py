@@ -1,40 +1,34 @@
-from .base import PragmaBase
+from ...shared import *
 
-from .armature import PragmaArmature, PragmaBone
+from .armature import Armature, Bone
 
-from .vector import PragmaVector3F, \
-    PragmaVector2F, \
-    PragmaVector3H, \
-    PragmaVector3HF, \
-    PragmaVector4F
+from .attachment import Attachment, ObjectAttachment, ObjectAttachmentType
 
-from .attachment import PragmaAttachment, PragmaObjectAttachment, PragmaObjectAttachmentType
+from .hitbox import HitBox
 
-from .hitbox import PragmaHitBox
+from .mesh import SubMesh, MeshGroup, SubMeshGeometryType, Mesh
 
-from .mesh import PragmaSubMesh, PragmaMeshGroup, PragmaSubMeshGeometryType, PragmaMeshV24Plus
+from .lod import LodInfo
 
-from .lod import PragmaLodInfo
+from .constraint import Constraint
 
-from .constraint import PragmaConstraint
+from .collision import CollisionMesh, CollisionMeshInfo, SoftBodyInfo
 
-from .collision import PragmaCollisionMesh, PragmaCollisionMeshInfo, PragmaSoftBodyInfo
+from .animations.armature_animation import ArmatureAnimation, \
+    ArmatureAnimationFrame, \
+    BlendController, \
+    ArmatureAnimationsFlags
 
-from .animations.armature_animation import PragmaArmatureAnimation, \
-    PragmaArmatureAnimationFrame, \
-    PragmaBlendController, \
-    PragmaArmatureAnimationsFlags
+from .animations.vertex_animation import VertexMeshAnimationFrameFlags, \
+    VertexMeshAnimation, \
+    FlexInfo, \
+    Phoneme, \
+    VertexAnimation
 
-from .animations.vertex_animation import PragmaVertexMeshAnimationFrameFlags, \
-    PragmaVertexMeshAnimation, \
-    PragmaFlexInfo, \
-    PragmaPhoneme, \
-    PragmaVertexAnimation
+from .ik import IKController
 
-from .ik import PragmaIKController
+from .animations.animation_info import AnimationInfo
 
-from .animations.animation_info import PragmaAnimationInfo
+from .ik import IKController
 
-from .ik import PragmaIKController
-
-from .eyeball import PragmaEyeball
+from .eyeball import Eyeball

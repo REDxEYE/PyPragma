@@ -1,17 +1,17 @@
 from typing import List
 
 from . import *
-from .vector import *
+from PyPragma.shared.modules.vector import *
 
 
-class PragmaBone(PragmaBase):
+class Bone(PragmaBase):
     def __init__(self, armature, name="ERROR"):
-        self._armature = armature  # type:PragmaArmature
+        self._armature = armature  # type:Armature
         self.name = name
-        self.position = PragmaVector3F()
-        self.rotation = PragmaVector4F()
-        self.childs = []  # type: List[PragmaBone]
-        self.parent = None  # type: PragmaBone
+        self.position = Vector3F()
+        self.rotation = Vector4F()
+        self.childs = []  # type: List[Bone]
+        self.parent = None  # type: Bone
 
     def from_file(self, reader: ByteIO):
         self.rotation.from_file(reader)
@@ -20,7 +20,7 @@ class PragmaBone(PragmaBase):
     def read_childs(self, reader: ByteIO):
         child_count = reader.read_uint32()
         for _ in range(child_count):
-            child = self._armature.bones[reader.read_uint32()]  # type: PragmaBone
+            child = self._armature.bones[reader.read_uint32()]  # type: Bone
             child.parent = self
             self.childs.append(child)
             child.read_childs(reader)
@@ -41,10 +41,10 @@ class PragmaBone(PragmaBase):
         pass
 
 
-class PragmaArmature(PragmaBase):
+class Armature(PragmaBase):
     def __init__(self):
-        self.bones = []  # type: List[PragmaBone]
-        self.roots = []  # type: List[PragmaBone]
+        self.bones = []  # type: List[Bone]
+        self.roots = []  # type: List[Bone]
         self._bone_names = []  # type: List[str]
 
     def from_file(self, reader: ByteIO):
@@ -52,7 +52,7 @@ class PragmaArmature(PragmaBase):
         for _ in range(bone_count):
             self._bone_names.append(reader.read_ascii_string())
         for i in range(bone_count):
-            bone = PragmaBone(self, self._bone_names[i])
+            bone = Bone(self, self._bone_names[i])
             bone.from_file(reader)
             self.bones.append(bone)
 

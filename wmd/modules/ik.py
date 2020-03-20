@@ -1,8 +1,8 @@
-from .base import PragmaBase
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.shared.modules.base import PragmaBase
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaIKController(PragmaBase):
+class IKController(PragmaBase):
     def __init__(self):
         self.name = ""
         self.type = ""

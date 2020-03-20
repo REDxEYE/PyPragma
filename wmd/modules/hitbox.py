@@ -1,14 +1,14 @@
 from . import *
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaHitBox(PragmaBase):
+class HitBox(PragmaBase):
     def __init__(self, armature):
         self._armature = armature
         self.bone = None
         self.group = 0
-        self.min = PragmaVector3F()
-        self.max = PragmaVector3F()
+        self.min = Vector3F()
+        self.max = Vector3F()
 
     def from_file(self, reader: ByteIO):
         self.bone = self._armature.bones[reader.read_uint32()]

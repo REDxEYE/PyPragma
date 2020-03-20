@@ -1,13 +1,13 @@
 from enum import IntFlag, auto
 from typing import List
-from PyWMD.wmd.modules import *
+from .modules import *
 
-from PyWMD.byte_io_wmd import ByteIO
+from ..byte_io_wmd import ByteIO
 
 MAX_SUPPORTED_VERSION = 30
 
 
-class PragmaModelFlags(IntFlag):
+class ModelFlags(IntFlag):
     NONE = 0
     Static = auto()
     Inanimate = auto()
@@ -19,13 +19,13 @@ class PragmaModelFlags(IntFlag):
     DontPrecacheTextureGroups = auto()
 
 
-class PragmaModel(PragmaBase):
+class Model(PragmaBase):
     def __init__(self):
-        PragmaBase.set_model(self)
+        PragmaBase.set_base(self)
         self.name = ""
         self.version = 0
-        self.flags = PragmaModelFlags(0)
-        self.eye_offset = PragmaVector3F()
+        self.flags = ModelFlags(0)
+        self.eye_offset = Vector3F()
 
         self.offset_model_data = 0
         self.offset_meshes = 0
@@ -47,21 +47,21 @@ class PragmaModel(PragmaBase):
         self.skins = []
 
         self.max_eye_deflection = 30.0  # Degree
-        self.eyeballs = []  # type: List[PragmaEyeball]
+        self.eyeballs = []  # type: List[Eyeball]
 
-        self.armature = PragmaArmature()
+        self.armature = Armature()
 
-        self.attachments = []  # type: List[PragmaAttachment]
-        self.object_attachments = []  # type: List[PragmaObjectAttachment]
-        self.hitboxes = []  # type: List[PragmaHitBox]
+        self.attachments = []  # type: List[Attachment]
+        self.object_attachments = []  # type: List[ObjectAttachment]
+        self.hitboxes = []  # type: List[HitBox]
 
-        self.mesh = PragmaMeshGroup()
-        self.lod_info = PragmaLodInfo()
-        self.collision_mesh = PragmaCollisionMeshInfo()
+        self.mesh = MeshGroup()
+        self.lod_info = LodInfo()
+        self.collision_mesh = CollisionMeshInfo()
 
-        self.blend_controllers = []  # type:List[PragmaBlendController]
-        self.ik_controllers = []  # type:List[PragmaIKController]
-        self.animation_info = PragmaAnimationInfo()
+        self.blend_controllers = []  # type:List[BlendController]
+        self.ik_controllers = []  # type:List[IKController]
+        self.animation_info = AnimationInfo()
 
         self.offsets_offset = 0
         self.skinned_data_offset = 0
@@ -70,7 +70,7 @@ class PragmaModel(PragmaBase):
 
     @property
     def static(self):
-        return bool(self.flags & PragmaModelFlags.Static)
+        return bool(self.flags & ModelFlags.Static)
 
     @property
     def skinned(self):
@@ -80,7 +80,8 @@ class PragmaModel(PragmaBase):
         header = reader.read_ascii_string(3)
         assert header == 'WMD', "invalid header"
         self.version = reader.read_uint16()
-        self.flags = PragmaModelFlags(reader.read_uint32())
+        assert 24 < self.version <= MAX_SUPPORTED_VERSION, f"Unsupported model version {self.version}!"
+        self.flags = ModelFlags(reader.read_uint32())
         self.eye_offset.from_file(reader)
 
         self.offset_model_data = reader.read_uint64()
@@ -112,19 +113,19 @@ class PragmaModel(PragmaBase):
 
             attachment_count = reader.read_uint32()
             for _ in range(attachment_count):
-                attachment = PragmaAttachment(self.armature)
+                attachment = Attachment(self.armature)
                 attachment.from_file(reader)
                 self.attachments.append(attachment)
 
             if self.version >= 23:
                 object_attachment_count = reader.read_uint32()
                 for _ in range(object_attachment_count):
-                    object_attachment = PragmaObjectAttachment()
+                    object_attachment = ObjectAttachment()
                     object_attachment.from_file(reader)
                     self.object_attachments.append(object_attachment)
             hitbox_count = reader.read_uint32()
             for _ in range(hitbox_count):
-                hitbox = PragmaHitBox(self.armature)
+                hitbox = HitBox(self.armature)
                 hitbox.from_file(reader)
                 self.hitboxes.append(hitbox)
 
@@ -148,23 +149,23 @@ class PragmaModel(PragmaBase):
         if self.skinned:
             blend_controllers_count = reader.read_uint16()
             for _ in range(blend_controllers_count):
-                controller = PragmaBlendController()
+                controller = BlendController()
                 controller.from_file(reader)
                 self.blend_controllers.append(controller)
             if self.version >= 22:
                 ik_controllers_count = reader.read_uint32()
                 for _ in range(ik_controllers_count):
-                    ik_controller = PragmaIKController()
+                    ik_controller = IKController()
                     ik_controller.from_file(reader)
                     self.ik_controllers.append(ik_controller)
 
             self.animation_info.from_file(reader)
 
-            if self.model.version >= 28:
+            if self.base.version >= 28:
                 reader.seek(self.offset_eyeballs)
                 self.max_eye_deflection = reader.read_float()
                 for _ in range(reader.read_uint32()):
-                    eyeball = PragmaEyeball()
+                    eyeball = Eyeball()
                     eyeball.from_file(reader)
                     self.eyeballs.append(eyeball)
 
@@ -286,7 +287,7 @@ class PragmaModel(PragmaBase):
 
             eyeball_offset = writer.tell()
             with writer.save_current_pos():
-                writer.seek(self.model.skinned_data_offset + 56)
+                writer.seek(self.base.skinned_data_offset + 56)
                 writer.write_uint64(eyeball_offset)
 
             writer.write_float(self.max_eye_deflection)

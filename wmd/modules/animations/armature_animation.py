@@ -1,11 +1,11 @@
 from enum import IntFlag
 from typing import List, Dict, Tuple
 
-from .. import PragmaBase, PragmaVector2F, PragmaVector3F, PragmaVector4F
-from PyWMD.byte_io_wmd import ByteIO
+from .. import PragmaBase, Vector2F, Vector3F, Vector4F
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaBlendController(PragmaBase):
+class BlendController(PragmaBase):
     def __init__(self):
         self.name = ''
         self.min = 0
@@ -23,7 +23,7 @@ class PragmaBlendController(PragmaBase):
         writer.write_uint8(self.loop)
 
 
-class PragmaArmatureAnimationsFlags(IntFlag):
+class ArmatureAnimationsFlags(IntFlag):
     NONE = 0
     Loop = 1
     NoRepeat = 2
@@ -34,19 +34,19 @@ class PragmaArmatureAnimationsFlags(IntFlag):
     NoMoveBlend = 512
 
 
-class PragmaArmatureAnimationFrame(PragmaBase):
-    def __init__(self, anim: 'PragmaArmatureAnimation'):
+class ArmatureAnimationFrame(PragmaBase):
+    def __init__(self, anim: 'ArmatureAnimation'):
         self._anim = anim
-        self.pos = []  # type:List[PragmaVector3F]
-        self.rot = []  # type:List[PragmaVector4F]
+        self.pos = []  # type:List[Vector3F]
+        self.rot = []  # type:List[Vector4F]
         self.events = {}  # type: Dict[str,List[str]]
-        self.move = PragmaVector2F()
+        self.move = Vector2F()
 
     def from_file(self, reader: ByteIO):
         for _ in self._anim.bones:
-            pos = PragmaVector3F()
+            pos = Vector3F()
             pos.from_file(reader)
-            quat = PragmaVector4F()
+            quat = Vector4F()
             quat.from_file(reader)
             self.pos.append(pos)
             self.rot.append(quat)
@@ -56,9 +56,9 @@ class PragmaArmatureAnimationFrame(PragmaBase):
             for _ in range(reader.read_uint8()):
                 params.append(reader.read_ascii_string())
             self.events[name] = params
-        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveX:
+        if self._anim.flags & ArmatureAnimationsFlags.MoveX:
             self.move.x = reader.read_float()
-        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveZ:
+        if self._anim.flags & ArmatureAnimationsFlags.MoveZ:
             self.move.z = reader.read_float()
 
     def to_file(self, writer: ByteIO):
@@ -71,33 +71,33 @@ class PragmaArmatureAnimationFrame(PragmaBase):
             writer.write_uint8(len(params))
             for param in params:
                 writer.write_ascii_string(param)
-        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveX:
+        if self._anim.flags & ArmatureAnimationsFlags.MoveX:
             writer.write_float(self.move.x)
-        if self._anim.flags & PragmaArmatureAnimationsFlags.MoveZ:
+        if self._anim.flags & ArmatureAnimationsFlags.MoveZ:
             writer.write_float(self.move.z)
 
 
-class PragmaArmatureAnimation(PragmaBase):
+class ArmatureAnimation(PragmaBase):
     def __init__(self):
         self.name = ""
         self.activity_name = ""
         self.activity_weight = ""
-        self.flags = PragmaArmatureAnimationsFlags(0)
+        self.flags = ArmatureAnimationsFlags(0)
         self.fps = 0
-        self.min = PragmaVector3F()
-        self.max = PragmaVector3F()
+        self.min = Vector3F()
+        self.max = Vector3F()
         self.fade_in = False
         self.fade_in_time = 0.0
         self.fade_out = False
         self.fade_out_time = 0.0
         self.bones = []
         self.weights = []
-        self.controller = PragmaBlendController()  # type:PragmaBlendController
+        self.controller = BlendController()  # type:BlendController
         self.transitions = []  # type: List[Tuple[int,int]] #animationId,transition
         self.animation_post_blend_controller = -1
         self.animation_post_blend_target = -1
 
-        self.frames = []  # type: List[PragmaArmatureAnimationFrame]
+        self.frames = []  # type: List[ArmatureAnimationFrame]
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
@@ -122,18 +122,18 @@ class PragmaArmatureAnimation(PragmaBase):
                 self.weights.append(reader.read_float())
 
         if reader.read_uint8() == 1:
-            self.controller = self.model.blend_controllers[reader.read_uint32()]
+            self.controller = self.base.blend_controllers[reader.read_uint32()]
             for _ in range(reader.read_uint32()):
-                if self.model.version >= 29:
+                if self.base.version >= 29:
                     self.transitions.append(reader.read_float())
                 else:
                     self.transitions.append(reader.read_fmt('Ii'))
-            if self.model.version >= 29:
+            if self.base.version >= 29:
                 self.animation_post_blend_controller = reader.read_int32()
                 self.animation_post_blend_target = reader.read_int32()
 
         for _ in range(reader.read_uint32()):
-            frame = PragmaArmatureAnimationFrame(self)
+            frame = ArmatureAnimationFrame(self)
             frame.from_file(reader)
             self.frames.append(frame)
 
@@ -168,7 +168,7 @@ class PragmaArmatureAnimation(PragmaBase):
 
         writer.write_uint8(self.controller.name != '')
         if self.controller.name != '':
-            writer.write_uint32(self.model.blend_controllers.index(self.controller))
+            writer.write_uint32(self.base.blend_controllers.index(self.controller))
             writer.write_uint32(len(self.transitions))
             for t in self.transitions:
                 writer.write_float(t)
@@ -181,4 +181,4 @@ class PragmaArmatureAnimation(PragmaBase):
 
     @property
     def has_movement(self):
-        return self.flags & PragmaArmatureAnimationsFlags.MoveX or self.flags & PragmaArmatureAnimationsFlags.MoveZ
+        return self.flags & ArmatureAnimationsFlags.MoveX or self.flags & ArmatureAnimationsFlags.MoveZ

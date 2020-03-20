@@ -2,24 +2,24 @@ from enum import IntEnum
 from typing import List, Dict
 
 from . import *
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaSubMeshGeometryType(IntEnum):
+class SubMeshGeometryType(IntEnum):
     Triangles = 0
     Lines = 1
     Points = 2
 
 
-class PragmaSubMesh(PragmaBase):
+class SubMesh(PragmaBase):
     def __init__(self):
-        self.pos = PragmaVector3F()
-        self.rot = PragmaVector4F()
-        self.scale = PragmaVector3F()
+        self.pos = Vector3F()
+        self.rot = Vector4F()
+        self.scale = Vector3F()
 
         self.material_id = 0
 
-        self.geometry_type = PragmaSubMeshGeometryType(0)
+        self.geometry_type = SubMeshGeometryType(0)
 
         self.vertices = []
         self.normals = []
@@ -27,29 +27,29 @@ class PragmaSubMesh(PragmaBase):
         self.weights = []
         self.additional_weights = []
         self.alpha_count = 0
-        self.alphas = []  # type:List[PragmaVector2F]
+        self.alphas = []  # type:List[Vector2F]
         self.indices = []
         self.flexes = {}
 
     def from_file(self, reader: ByteIO):
-        if self.model.version >= 26:
+        if self.base.version >= 26:
             self.pos.from_file(reader)
             self.rot.from_file(reader)
             self.scale.from_file(reader)
         self.material_id = reader.read_uint16()
-        if self.model.version >= 27:
-            self.geometry_type = PragmaSubMeshGeometryType(reader.read_uint8())
+        if self.base.version >= 27:
+            self.geometry_type = SubMeshGeometryType(reader.read_uint8())
 
         vertex_count = reader.read_uint64()
-        if self.model.version < 30:
+        if self.base.version < 30:
             self.uv_sets["base"] = []
         for _ in range(vertex_count):
             self.vertices.append(reader.read_fmt("3f"))
             self.normals.append(reader.read_fmt("3f"))
-            if self.model.version < 30:
+            if self.base.version < 30:
                 self.uv_sets["base"].append(reader.read_fmt("2f"))
 
-        if self.model.version >= 30:
+        if self.base.version >= 30:
             uv_set_count = reader.read_uint8()
             for _ in range(uv_set_count):
                 uv_set_name = reader.read_ascii_string()
@@ -61,23 +61,23 @@ class PragmaSubMesh(PragmaBase):
         for _ in range(weight_count):
             self.weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
 
-        if self.model.version >= 27:
+        if self.base.version >= 27:
             weight_count = reader.read_uint64()
             for _ in range(weight_count):
                 self.additional_weights.append((reader.read_fmt('4i'), reader.read_fmt('4f')))
 
-        if self.model.version >= 30:
+        if self.base.version >= 30:
             self.alpha_count = reader.read_uint8()
             if self.alpha_count > 0:
                 for _ in range(vertex_count):
-                    alpha = PragmaVector2F([0, 0])
+                    alpha = Vector2F([0, 0])
                     alpha.x = reader.read_float()
                     if self.alpha_count > 1:
                         alpha.y = reader.read_float()
                     self.alphas.append(alpha)
 
         indices_count = reader.read_uint32()
-        if self.model.version < 30:
+        if self.base.version < 30:
             indices_count *= 3
         for _ in range(indices_count):
             self.indices.append(reader.read_uint16())
@@ -123,29 +123,29 @@ class PragmaSubMesh(PragmaBase):
             writer.write_fmt('H', *ind)
 
 
-class PragmaMeshV24Plus(PragmaBase):
+class Mesh(PragmaBase):
     def __init__(self):
         self.name = ''
-        self.meshes = []  # type:List[List[PragmaSubMesh]]
-        self.sub_meshes = []  # type: List[PragmaSubMesh]
+        self.meshes = []  # type:List[List[SubMesh]]
+        self.sub_meshes = []  # type: List[SubMesh]
 
     def __repr__(self):
         return f"Mesh<{self.name}>(sub meshes:{len(self.sub_meshes)})"
 
     def from_file(self, reader: ByteIO):
         self.name = reader.read_ascii_string()
-        if self.model.version < 30:
+        if self.base.version < 30:
             mesh_count = reader.read_uint8()
         else:
             mesh_count = reader.read_uint32()
         for _ in range(mesh_count):
             meshes = []
-            if self.model.version <= 23:
+            if self.base.version <= 23:
                 pass  # TODO
             else:
                 sub_mesh_count = reader.read_uint32()
                 for _ in range(sub_mesh_count):
-                    sub_mesh = PragmaSubMesh()
+                    sub_mesh = SubMesh()
                     sub_mesh.from_file(reader)
                     self.sub_meshes.append(sub_mesh)
                     meshes.append(sub_mesh)
@@ -160,13 +160,13 @@ class PragmaMeshV24Plus(PragmaBase):
                 sub_mesh.to_file(writer)
 
 
-class PragmaMeshGroup(PragmaBase):
+class MeshGroup(PragmaBase):
     def __init__(self):
-        self.rb_min = PragmaVector3F()
-        self.rb_max = PragmaVector3F()
+        self.rb_min = Vector3F()
+        self.rb_max = Vector3F()
 
-        self.mesh_groups = []  # type:List[PragmaMeshV24Plus]
-        self.bodygroups = {}  # type: Dict[str,List[PragmaMeshV24Plus]]
+        self.mesh_groups = []  # type:List[Mesh]
+        self.bodygroups = {}  # type: Dict[str,List[Mesh]]
 
         self.group_ids = []
 
@@ -175,7 +175,7 @@ class PragmaMeshGroup(PragmaBase):
         self.rb_max.from_file(reader)
         mesh_group_count = reader.read_uint32()
         for _ in range(mesh_group_count):
-            mesh = PragmaMeshV24Plus()
+            mesh = Mesh()
             mesh.from_file(reader)
             self.mesh_groups.append(mesh)
             pass

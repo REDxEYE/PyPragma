@@ -1,27 +1,27 @@
 from typing import List, Tuple
 
-from .. import PragmaBase, PragmaArmatureAnimation, PragmaVertexAnimation, PragmaFlexInfo, PragmaPhoneme
-from PyWMD.byte_io_wmd import ByteIO
+from .. import PragmaBase, ArmatureAnimation, VertexAnimation, FlexInfo, Phoneme
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaAnimationInfo(PragmaBase):
+class AnimationInfo(PragmaBase):
     def __init__(self):
-        self.armature_animations = []  # type:List[PragmaArmatureAnimation]
-        self.vertex_animations = []  # type:List[PragmaVertexAnimation]
+        self.armature_animations = []  # type:List[ArmatureAnimation]
+        self.vertex_animations = []  # type:List[VertexAnimation]
         self.flex_controllers = []  # type:List[Tuple[str,float,float]] # name,min,max
-        self.flex_infos = []  # type:List[PragmaFlexInfo]
-        self.phonemes = []  # type:List[PragmaPhoneme]
+        self.flex_infos = []  # type:List[FlexInfo]
+        self.phonemes = []  # type:List[Phoneme]
 
     def from_file(self, reader: ByteIO):
         armature_animation_count = reader.read_uint32()
         for _ in range(armature_animation_count):
-            arm_anim = PragmaArmatureAnimation()
+            arm_anim = ArmatureAnimation()
             arm_anim.from_file(reader)
             self.armature_animations.append(arm_anim)
-        if self.model.version >= 21:
+        if self.base.version >= 21:
             vertex_anim_count = reader.read_uint32()
             for _ in range(vertex_anim_count):
-                vert_anim = PragmaVertexAnimation()
+                vert_anim = VertexAnimation()
                 vert_anim.from_file(reader)
                 self.vertex_animations.append(vert_anim)
 
@@ -29,16 +29,14 @@ class PragmaAnimationInfo(PragmaBase):
                 self.flex_controllers.append((reader.read_ascii_string(), reader.read_float(), reader.read_float()))
 
             for _ in range(reader.read_uint32()):
-                flex_info = PragmaFlexInfo()
+                flex_info = FlexInfo()
                 flex_info.from_file(reader)
                 self.flex_infos.append(flex_info)
 
             for _ in range(reader.read_uint32()):
-                phoneme = PragmaPhoneme()
+                phoneme = Phoneme()
                 phoneme.from_file(reader)
                 self.phonemes.append(phoneme)
-
-
 
     def to_file(self, writer: ByteIO):
         writer.write_uint32(len(self.armature_animations))
@@ -47,7 +45,7 @@ class PragmaAnimationInfo(PragmaBase):
 
         vert_anim_offset = writer.tell()
         with writer.save_current_pos():
-            writer.seek(self.model.skinned_data_offset + 16)
+            writer.seek(self.base.skinned_data_offset + 16)
             writer.write_uint64(vert_anim_offset)
 
         writer.write_uint32(len(self.vertex_animations))
@@ -56,7 +54,7 @@ class PragmaAnimationInfo(PragmaBase):
 
         flex_controllers_offset = writer.tell()
         with writer.save_current_pos():
-            writer.seek(self.model.skinned_data_offset + 24)
+            writer.seek(self.base.skinned_data_offset + 24)
             writer.write_uint64(flex_controllers_offset)
 
         writer.write_uint32(len(self.flex_controllers))
@@ -66,7 +64,7 @@ class PragmaAnimationInfo(PragmaBase):
 
         flex_infos_offset = writer.tell()
         with writer.save_current_pos():
-            writer.seek(self.model.skinned_data_offset + 32)
+            writer.seek(self.base.skinned_data_offset + 32)
             writer.write_uint64(flex_infos_offset)
 
         writer.write_uint32(len(self.flex_infos))
@@ -75,11 +73,9 @@ class PragmaAnimationInfo(PragmaBase):
 
         phonemes_offset = writer.tell()
         with writer.save_current_pos():
-            writer.seek(self.model.skinned_data_offset + 40)
+            writer.seek(self.base.skinned_data_offset + 40)
             writer.write_uint64(phonemes_offset)
 
         writer.write_uint32(len(self.phonemes))
         for phoneme in self.phonemes:
             phoneme.to_file(writer)
-
-

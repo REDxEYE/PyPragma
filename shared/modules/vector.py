@@ -1,7 +1,13 @@
-from PyWMD.byte_io_wmd import ByteIO
+import typing
+
+from PyPragma.byte_io_wmd import ByteIO
+import numpy as np
 
 
-class PragmaVector:
+
+class Vector:
+    VECTOR_OF_SCALAR = typing.Union["Vector", int, float]
+
     sanitize = True  # disable for speedup
     size = 0
     value_type = "x"
@@ -26,7 +32,7 @@ class PragmaVector:
     def __init__(self, initial_values=None, *args):
         if initial_values is not None:
             if type(initial_values) in [int, float] and args:
-                # case where PragmaVector initialized as PragmaVector(X,Y,Z...) instead of PragmaVector([X,Y,Z...])
+                # case where Vector initialized as Vector(X,Y,Z...) instead of Vector([X,Y,Z...])
                 initial_values = [initial_values, ] + list(args)
             if self.sanitize:
                 self.validate_input(initial_values)
@@ -45,7 +51,7 @@ class PragmaVector:
     def values(self):
         return self._values
 
-    def __eq__(self, other: 'PragmaVector'):
+    def __eq__(self, other: 'Vector'):
         return self.size == other.size and self.value_type == other.value_type and self.values == other.values
 
     def __repr__(self):
@@ -55,23 +61,42 @@ class PragmaVector:
     def __len__(self):
         return len(self._values)
 
-class PragmaVector2F(PragmaVector):
+    def __neg__(self):
+        return self * -1
+
+    def __sub__(self, other: VECTOR_OF_SCALAR):
+        return self.__class__(np.subtract(self.values, other.values))
+
+    def __add__(self, other: VECTOR_OF_SCALAR):
+        return self.__class__(np.add(self.values, other.values))
+
+    def __mul__(self, other: VECTOR_OF_SCALAR):
+        return self.__class__(np.multiply(self.values, other.values))
+
+    def __div__(self, other: VECTOR_OF_SCALAR):
+        return self.__class__(np.multiply(self.values, other.values))
+
+    def dot(self, other: VECTOR_OF_SCALAR):
+        return np.dot(self.values, other.values)
+
+
+class Vector2F(Vector):
     size = 2
     value_type = 'f'
     value_order = "xy"
 
 
-class PragmaVector3F(PragmaVector):
+class Vector3F(Vector):
     size = 3
     value_type = 'f'
     value_order = 'xyz'
 
 
-class PragmaVector3H(PragmaVector3F):
+class Vector3H(Vector3F):
     value_type = 'H'
 
 
-class PragmaVector3HF(PragmaVector3F):
+class Vector3HF(Vector3F):
     value_type = 'x'
 
     def from_file(self, reader: ByteIO):
@@ -82,7 +107,7 @@ class PragmaVector3HF(PragmaVector3F):
             writer.write_float16(v)
 
 
-class PragmaVector4F(PragmaVector):
+class Vector4F(Vector):
     size = 4
     value_type = 'f'
     value_order = 'wxyz'
@@ -93,5 +118,5 @@ class PragmaVector4F(PragmaVector):
 
 if __name__ == '__main__':
     # TESTING STUFF
-    assert PragmaVector2F(1, 2) == PragmaVector2F([1, 2])
-    assert PragmaVector2F(1, 2).x == PragmaVector2F([1, 2]).x
+    assert Vector2F(1, 2) == Vector2F([1, 2])
+    assert Vector2F(1, 2).x == Vector2F([1, 2]).x

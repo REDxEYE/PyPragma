@@ -1,16 +1,16 @@
-from . import PragmaBase, PragmaVector3F
-from PyWMD.byte_io_wmd import ByteIO
+from . import PragmaBase, Vector3F
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaEyeball(PragmaBase):
+class Eyeball(PragmaBase):
     def __init__(self):
         self.name = ''
         self.bone_index = -1
-        self.origin = PragmaVector3F()
+        self.origin = Vector3F()
         self.z_offset = 0.0
         self.radius = 0.0
-        self.up = PragmaVector3F()
-        self.forward = PragmaVector3F()
+        self.up = Vector3F()
+        self.forward = Vector3F()
         self.iris_material_index = -1
         self.max_dilation_factor = 1.0
         self.iris_uv_radius = 0.2

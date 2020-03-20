@@ -1,8 +1,8 @@
 from . import *
-from PyWMD.byte_io_wmd import ByteIO
+from PyPragma.byte_io_wmd import ByteIO
 
 
-class PragmaLodInfo(PragmaBase):
+class LodInfo(PragmaBase):
     def __init__(self):
         self.lods = {}
 
