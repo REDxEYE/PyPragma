@@ -1,6 +1,6 @@
 import typing
 
-from PyPragma.byte_io_wmd import ByteIO
+from ...byte_io_wmd import ByteIO
 
 
 class PragmaBase:

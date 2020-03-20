@@ -1,5 +1,5 @@
-from PyPragma.shared.modules.base import PragmaBase
-from PyPragma.byte_io_wmd import ByteIO
+from ...shared.modules.base import PragmaBase
+from ...byte_io_wmd import ByteIO
 
 
 class IKController(PragmaBase):

@@ -2,7 +2,7 @@ from enum import IntFlag
 from typing import List, Dict, Tuple
 
 from .. import PragmaBase, Vector2F, Vector3F, Vector4F
-from PyPragma.byte_io_wmd import ByteIO
+from ....byte_io_wmd import ByteIO
 
 
 class BlendController(PragmaBase):

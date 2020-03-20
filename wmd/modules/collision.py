@@ -2,7 +2,7 @@ from enum import IntFlag
 from typing import List
 
 from . import Vector3F, PragmaBase, Constraint, Bone
-from PyPragma.byte_io_wmd import ByteIO
+from ...byte_io_wmd import ByteIO
 
 
 class CollisionMeshFlags(IntFlag):

@@ -2,7 +2,7 @@ from enum import IntEnum
 from typing import List, Dict
 
 from . import *
-from PyPragma.byte_io_wmd import ByteIO
+from ...byte_io_wmd import ByteIO
 
 
 class SubMeshGeometryType(IntEnum):

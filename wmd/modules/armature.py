@@ -1,7 +1,7 @@
 from typing import List
 
 from . import *
-from PyPragma.shared.modules.vector import *
+from ...shared.modules.vector import *
 
 
 class Bone(PragmaBase):

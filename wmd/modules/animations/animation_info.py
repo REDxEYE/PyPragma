@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
 from .. import PragmaBase, ArmatureAnimation, VertexAnimation, FlexInfo, Phoneme
-from PyPragma.byte_io_wmd import ByteIO
+from ....byte_io_wmd import ByteIO
 
 
 class AnimationInfo(PragmaBase):

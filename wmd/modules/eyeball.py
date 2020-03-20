@@ -1,5 +1,5 @@
 from . import PragmaBase, Vector3F
-from PyPragma.byte_io_wmd import ByteIO
+from ...byte_io_wmd import ByteIO
 
 
 class Eyeball(PragmaBase):
