@@ -1,3 +1,6 @@
+from enum import IntFlag, auto, IntEnum
+from typing import List, Dict, Tuple
+
 from enum import IntFlag, auto
 from typing import List
 from .modules import *
