@@ -2,7 +2,7 @@ from enum import IntFlag
 from typing import List
 
 from .. import PragmaBase, PragmaSubMesh, PragmaVector3HF
-from ...byte_io_wmd import ByteIO
+from PyWMD.byte_io_wmd import ByteIO
 
 
 class PragmaVertexMeshAnimationFrameFlags(IntFlag):

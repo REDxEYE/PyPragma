@@ -1,11 +1,8 @@
-from enum import IntFlag, auto, IntEnum
-from typing import List, Dict, Tuple
-
 from enum import IntFlag, auto
 from typing import List
-from .modules import *
+from PyWMD.wmd.modules import *
 
-from .byte_io_wmd import ByteIO
+from PyWMD.byte_io_wmd import ByteIO
 
 MAX_SUPPORTED_VERSION = 30
 

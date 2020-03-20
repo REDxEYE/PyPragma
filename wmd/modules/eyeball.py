@@ -1,5 +1,5 @@
 from . import PragmaBase, PragmaVector3F
-from ..byte_io_wmd import ByteIO
+from PyWMD.byte_io_wmd import ByteIO
 
 
 class PragmaEyeball(PragmaBase):

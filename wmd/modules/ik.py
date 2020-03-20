@@ -1,5 +1,5 @@
 from .base import PragmaBase
-from ..byte_io_wmd import ByteIO
+from PyWMD.byte_io_wmd import ByteIO
 
 
 class PragmaIKController(PragmaBase):
