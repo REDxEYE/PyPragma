@@ -74,3 +74,7 @@ class World(PragmaBase):
             if version < 10 or version > MAX_SUPPORTED_VERSION:
                 return False
         return True
+
+    def get_entities_by_class(self, class_name):
+        entities = list(filter(lambda entity: entity.class_name == class_name, self.entities))
+        return entities
